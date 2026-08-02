@@ -1,0 +1,318 @@
+/* ============================================================
+   GeoMechanics Tools — tokens y shell compartidos
+   (titlebar, sidebar, layout base). Colores calcados de
+   ModuloGeomecanico.color en Swift: RGB(36,88,202) = #2458CA.
+   ============================================================ */
+
+/* Curva de easing tipo macOS (deceleracion suave, sin rebote) y duraciones
+   mas generosas — las transiciones por defecto del navegador (ease, 0.1-0.15s)
+   se sienten "instantaneas" comparadas con las animaciones de SwiftUI. */
+@property --sidebar-w {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 250px;
+}
+
+:root {
+  --ease-mac: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 0.2s;
+  --dur-base: 0.3s;
+
+  --content-bg: #ffffff;
+  --sidebar-bg: #f6f6f8;
+  --titlebar-bg: #f6f6f8;
+  --divider: #e3e3e8;
+  --card-border: #e5e5ea;
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #9a9aa0;
+  --accent: #2458ca;
+  --accent-hover: #1c46a3;
+  --icon-tint: #e7ecfa;
+  --hover-fill: #ececef;
+  --pressed-fill: #e1e1e5;
+
+  --risk-low: #34c759;
+  --risk-medium: #ffcc00;
+  --risk-high: #ff9500;
+  --risk-critical: #ff3b30;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --content-bg: #1e1e21;
+    --sidebar-bg: #1a1a1c;
+    --titlebar-bg: #1a1a1c;
+    --divider: #2e2e33;
+    --card-border: #323237;
+    --text-primary: #f2f2f3;
+    --text-secondary: #9d9da3;
+    --text-tertiary: #6e6e73;
+    --accent: #5b84e8;
+    --accent-hover: #7d9ff0;
+    --icon-tint: #232c47;
+    --hover-fill: #29292d;
+    --pressed-fill: #323236;
+
+    --risk-low: #30d158;
+    --risk-medium: #ffd60a;
+    --risk-high: #ff9f0a;
+    --risk-critical: #ff453a;
+  }
+}
+:root[data-theme="dark"] {
+  --content-bg: #1e1e21;
+  --sidebar-bg: #1a1a1c;
+  --titlebar-bg: #1a1a1c;
+  --divider: #2e2e33;
+  --card-border: #323237;
+  --text-primary: #f2f2f3;
+  --text-secondary: #9d9da3;
+  --text-tertiary: #6e6e73;
+  --accent: #5b84e8;
+  --accent-hover: #7d9ff0;
+  --icon-tint: #232c47;
+  --hover-fill: #29292d;
+  --pressed-fill: #323236;
+
+  --risk-low: #3ec37a;
+  --risk-medium: #d7ab34;
+  --risk-high: #e08a3f;
+  --risk-critical: #e5605f;
+}
+:root[data-theme="light"] {
+  --content-bg: #ffffff;
+  --sidebar-bg: #f6f6f8;
+  --titlebar-bg: #f6f6f8;
+  --divider: #e3e3e8;
+  --card-border: #e5e5ea;
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #9a9aa0;
+  --accent: #2458ca;
+  --accent-hover: #1c46a3;
+  --icon-tint: #e7ecfa;
+  --hover-fill: #ececef;
+  --pressed-fill: #e1e1e5;
+
+  --risk-low: #34c759;
+  --risk-medium: #ffcc00;
+  --risk-high: #ff9500;
+  --risk-critical: #ff3b30;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--content-bg);
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  --sidebar-w: 250px;
+  /* Anima la custom property en si (soportado en navegadores modernos via
+     @property arriba): al cambiar --sidebar-w, el ancho de .body se
+     interpola en vez de saltar de 250px a 0 de golpe. */
+  transition: --sidebar-w var(--dur-base) var(--ease-mac);
+}
+
+/* ============ Title bar ============ */
+.titlebar {
+  height: 52px;
+  flex: 0 0 auto;
+  background: var(--titlebar-bg);
+  border-bottom: 1px solid var(--divider);
+  display: grid;
+  /* La columna del toggle es de ancho fijo (no --sidebar-w): si dependiera
+     del mismo ancho que colapsa a 0, el botón se superpone al título al
+     cerrar el sidebar. */
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+}
+
+/* Paginas de modulo: no tienen sidebar (en la app real, "Inicio" reemplaza
+   la barra lateral dentro de un modulo), asi que el titlebar arranca
+   directo con el titulo, sin la columna reservada para el toggle. */
+.titlebar--module {
+  grid-template-columns: 1fr auto;
+  padding-left: 16px;
+}
+.titlebar--module .titlebar-title { margin-left: 0; }
+
+.chip-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color var(--dur-fast) var(--ease-mac);
+}
+.chip-btn:hover { background: var(--hover-fill); }
+.chip-btn svg { width: 18px; height: 18px; }
+
+.titlebar-toggle { margin-left: 14px; }
+
+.titlebar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-left: 24px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folder-chip {
+  margin-right: 16px;
+  background: var(--content-bg);
+  border: 1px solid var(--card-border);
+}
+.folder-chip svg { width: 16px; height: 16px; }
+.folder-chip:hover { background: var(--hover-fill); }
+
+/* ============ Barra de acciones del modulo (Inicio/Nuevo/Abrir/Guardar/Exportar) ============ */
+.titlebar-mid {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  height: 100%;
+}
+
+.titlebar-actions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+
+.tb-icon {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color var(--dur-fast) var(--ease-mac);
+}
+.tb-icon:hover { background: var(--hover-fill); }
+.tb-icon svg { width: 17px; height: 17px; }
+.tb-icon .badge {
+  position: absolute; right: 2px; bottom: 2px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.tb-icon .badge svg { width: 7px; height: 7px; }
+
+/* Exportar PDF: solo icono, en la esquina (equivalente al .primaryAction
+   del toolbar de SwiftUI) — no es un boton de texto como los .tb-icon de
+   navegacion, va aparte a la derecha del todo. */
+.tb-export {
+  width: 32px;
+  height: 32px;
+  margin-right: 14px;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  flex: 0 0 auto;
+  transition: background-color var(--dur-fast) var(--ease-mac);
+}
+.tb-export:hover { background: var(--hover-fill); }
+.tb-export svg { width: 17px; height: 17px; }
+
+/* ============ Body ============ */
+.body { flex: 1 1 auto; display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 0; min-width: 0; }
+
+.sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--divider);
+  display: flex;
+  flex-direction: column;
+  padding: 4px 10px 10px;
+  transition: opacity var(--dur-base) var(--ease-mac);
+  overflow: hidden;
+}
+.app.collapsed .sidebar { opacity: 0; pointer-events: none; }
+
+.section-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+  margin: 16px 0 6px 10px;
+}
+.section-label:first-child { margin-top: 6px; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease-mac);
+}
+.nav-item:hover { background: var(--hover-fill); }
+.nav-item:active { background: var(--pressed-fill); }
+.nav-item.active { background: var(--icon-tint); color: var(--accent); font-weight: 600; }
+.nav-item svg { width: 17px; height: 17px; flex: 0 0 auto; color: var(--text-secondary); }
+.nav-item.active svg { color: var(--accent); }
+
+.sidebar-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.sidebar-footer .help { display: flex; align-items: center; gap: 8px; }
+.sidebar-footer svg { width: 15px; height: 15px; }
+
+/* ============ Content ============ */
+.content { overflow: auto; background: var(--content-bg); min-width: 0; flex: 1 1 auto; }
+.content-inner { padding: 32px 40px 40px; max-width: 1100px; margin: 0 auto; }
+
+h1.page-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+.page-subtitle {
+  margin: 6px 0 28px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 700px) {
+  .content-inner { padding: 20px 18px 28px; }
+  h1.page-title { font-size: 22px; }
+}

@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RMR Bieniawski — GeoMechanics Tools</title>
+<script>
+if(sessionStorage.getItem("gmt_auth")!=="true"){window.location.href="index.html";}
+</script>
+<link rel="icon" type="image/png" href="../assets/app_icon.png">
+<link rel="stylesheet" href="../assets/styles.css">
+<script src="../assets/vendor/jspdf.umd.min.js"></script>
+<script src="../assets/vendor/html2canvas.min.js"></script>
+<style>
+  .module-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+  @media (max-width: 900px) {
+    .module-body { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  /* ---- Cabecera del modulo ---- */
+  .module-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  .module-header .icon-box {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: var(--icon-tint); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  .module-header .icon-box svg { width: 24px; height: 24px; }
+  .module-header h1 { margin: 0; font-size: 20px; font-weight: 700; color: var(--text-primary); }
+  .module-header p { margin: 2px 0 0; font-size: 12.5px; color: var(--text-secondary); }
+
+  /* ---- Tarjeta base ---- */
+  .panel {
+    background: var(--content-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* ---- Tarjeta de parametro (acordeon) ---- */
+  .param-card summary { list-style: none; cursor: pointer; }
+  .param-card summary::-webkit-details-marker { display: none; }
+  .param-head { display: flex; align-items: center; gap: 10px; }
+  .param-icon {
+    width: 30px; height: 30px; border-radius: 8px; flex: 0 0 auto;
+    background: var(--icon-tint); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .param-icon svg { width: 15px; height: 15px; }
+  .param-title { font-size: 14.5px; font-weight: 600; color: var(--text-primary); flex: 1 1 auto; }
+  .param-badge {
+    font-size: 13px; font-weight: 700; color: var(--accent);
+    background: var(--icon-tint); border-radius: 999px; padding: 3px 9px;
+    font-variant-numeric: tabular-nums;
+  }
+  .param-chevron { width: 14px; height: 14px; color: var(--text-secondary); transition: transform var(--dur-base) var(--ease-mac); flex: 0 0 auto; }
+  .param-card[open] .param-chevron { transform: rotate(180deg); }
+  /* La altura del <details> la anima JS (Web Animations API); esto solo
+     evita que el contenido se vea recortado feo mientras se mide. */
+  .param-card { overflow: hidden; }
+  .param-card.animating, .collapsible.animating { will-change: height; }
+  .param-content { padding-top: 14px; }
+  .param-sub + .param-sub { margin-top: 14px; }
+  .param-sub-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin: 0 0 6px; }
+
+  /* ---- Selector tipo chip ---- */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border-radius: 999px; cursor: pointer;
+    background: var(--hover-fill); border: 1px solid transparent;
+    color: var(--text-primary); font-size: 12.5px; font-weight: 500;
+    transition: background-color var(--dur-base) var(--ease-mac), color var(--dur-base) var(--ease-mac), border-color var(--dur-fast) var(--ease-mac);
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip .chip-pts {
+    font-size: 11px; font-variant-numeric: tabular-nums;
+    background: rgba(127,127,127,0.18); border-radius: 999px; padding: 1px 6px;
+  }
+  .chip.active { background: var(--accent); color: #fff; }
+  .chip.active .chip-pts { background: rgba(255,255,255,0.25); }
+
+  /* ---- Imagen de referencia orientacion ---- */
+  .orientation-ref { margin-top: 12px; }
+  .orientation-ref img {
+    display: block; max-width: 100%; max-height: 170px; margin: 0 auto;
+    background: #fff; border-radius: 10px; border: 1px solid var(--card-border);
+  }
+  .orientation-ref p { margin: 8px 0 0; font-size: 11px; color: var(--text-secondary); text-align: center; }
+
+  /* ---- Plano de referencia (drop zone) ---- */
+  .drop-zone {
+    margin-top: 12px; min-height: 110px; border-radius: 10px; cursor: pointer;
+    border: 1.5px dashed var(--card-border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    color: var(--text-secondary); text-align: center; padding: 14px;
+  }
+  .drop-zone.drag { border-color: var(--accent); background: var(--icon-tint); }
+  .drop-zone svg { width: 24px; height: 24px; color: var(--accent); opacity: 0.7; }
+  .drop-zone span { font-size: 12px; }
+  .drop-zone img { max-width: 100%; max-height: 220px; border-radius: 8px; }
+  .plano-head { display: flex; align-items: center; gap: 10px; }
+  .plano-clear {
+    margin-left: auto; border: none; background: none; cursor: pointer;
+    color: var(--text-secondary); width: 20px; height: 20px; display: none;
+  }
+  .plano-clear svg { width: 18px; height: 18px; }
+  .plano-clear.show { display: block; }
+
+  /* ---- Panel resultado (columna derecha) ---- */
+  .result-sticky { position: sticky; top: 24px; }
+
+  .score-card { text-align: center; }
+  .gauge-wrap { position: relative; width: 128px; height: 128px; margin: 4px auto 12px; }
+  .gauge-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .gauge-track { fill: none; stroke: var(--hover-fill); stroke-width: 10; }
+  .gauge-value { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dasharray 0.4s ease, stroke 0.4s ease; }
+  .gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .gauge-center .num { font-size: 30px; font-weight: 700; color: var(--text-primary); line-height: 1; font-variant-numeric: tabular-nums; }
+  .gauge-center .den { font-size: 10.5px; color: var(--text-secondary); margin-top: 2px; }
+
+  .score-class { font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 2px 0 0; }
+  .score-desc { font-size: 12.5px; color: var(--text-secondary); margin: 1px 0 10px; }
+
+  .risk-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px;
+  }
+  .risk-pill svg { width: 13px; height: 13px; }
+
+  .barton-row { display: flex; align-items: center; gap: 10px; }
+  .barton-text { flex: 1 1 auto; }
+  .barton-text .t1 { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .barton-text .t2 { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+  .barton-value { font-size: 15px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+  .collapsible summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .collapsible summary::-webkit-details-marker { display: none; }
+  .collapsible summary .s-icon { width: 17px; height: 17px; color: var(--accent); }
+  .collapsible summary .s-title { font-size: 13px; font-weight: 600; color: var(--text-primary); flex: 1 1 auto; }
+  .collapsible summary .s-chevron { width: 13px; height: 13px; color: var(--text-secondary); transition: transform var(--dur-base) var(--ease-mac); }
+  .collapsible[open] summary .s-chevron { transform: rotate(180deg); }
+  .collapsible .s-body { padding-top: 10px; }
+  .collapsible { overflow: hidden; }
+
+  .breakdown-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12.5px; }
+  .breakdown-row .k { color: var(--text-secondary); }
+  .breakdown-row .v { font-variant-numeric: tabular-nums; color: var(--text-primary); }
+
+  .class-row {
+    display: flex; justify-content: space-between; gap: 10px;
+    padding: 5px 7px; border-radius: 7px; font-size: 12.5px;
+  }
+  .class-row.current { background: var(--icon-tint); }
+  .class-row .k { font-variant-numeric: tabular-nums; color: var(--text-primary); }
+  .class-row.current .k { font-weight: 700; color: var(--accent); }
+  .class-row .v { color: var(--text-secondary); }
+
+
+  /* ---- Hoja de impresion dedicada (calca RMRPDFReportService.swift) ---- */
+  #printSheet {
+    display: none;
+    --ps-accent: #2458ca;
+    --ps-accent-dark: #183b87;
+    --ps-select: #1e4696;
+    --ps-tint-select: rgba(30,70,150,0.12);
+    --ps-tint-soft: rgba(36,88,202,0.06);
+    --ps-grid: #c7c7c7;
+    --ps-gray: #616161;
+  }
+
+  /* Reglas del contenido de la hoja fuera de @media print: así se pueden
+     renderizar en pantalla (display alternado por JS) para que html2canvas
+     capture el diseño real al generar el PDF con jsPDF, no solo al imprimir. */
+  #printSheet.ps-active {
+    display: block; width: 100%;
+    font-family: Helvetica, Arial, sans-serif; color: #1e1e1e; background: #fff;
+    padding: 10mm; box-sizing: border-box;
+  }
+
+  .ps-title { margin: 0; font-size: 15pt; font-weight: 700; color: var(--ps-accent-dark); }
+  .ps-subtitle { margin: 2pt 0 8pt; font-size: 8.5pt; color: var(--ps-gray); }
+
+  .ps-card {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 0;
+    border: 0.8pt solid var(--ps-accent); border-radius: 8pt;
+    background: var(--ps-tint-soft); padding: 7pt 10pt; margin-bottom: 10pt;
+  }
+  .ps-card .ps-f label {
+    display: block; font-size: 6pt; font-weight: 700; color: var(--ps-accent);
+    text-transform: uppercase; margin-bottom: 3pt;
+  }
+  .ps-card .ps-f div { font-size: 9.5pt; font-weight: 700; color: #1e1e1e; }
+
+  .ps-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14pt; align-items: start; }
+
+  .ps-bar {
+    background: var(--ps-accent-dark); color: #fff; font-size: 7.5pt; font-weight: 700;
+    border-radius: 4pt; padding: 4.5pt 8pt; margin-bottom: 5pt;
+  }
+
+  .ps-table { width: 100%; border-collapse: collapse; font-size: 7.3pt; margin-bottom: 10pt; }
+  .ps-table th {
+    background: var(--ps-accent); color: #fff; font-weight: 700; text-align: left;
+    padding: 3pt 5pt; border: 0.4pt solid var(--ps-grid);
+  }
+  .ps-table th.center, .ps-table td.center { text-align: center; }
+  .ps-table td { padding: 3.5pt 5pt; border: 0.4pt solid var(--ps-grid); }
+  .ps-table tr.zebra td { background: #f6f6f6; }
+  .ps-table td.pts { font-weight: 700; color: var(--ps-accent); text-align: center; }
+  .ps-table tr.total td { font-weight: 700; }
+  .ps-table tr.highlight td {
+    background: var(--ps-tint-select); font-weight: 700;
+    border-left: 2.5pt solid var(--ps-select);
+  }
+  .ps-table tr.highlight td.pts { color: var(--ps-select); }
+
+  .ps-scale { display: grid; grid-template-columns: repeat(5, 1fr); }
+  .ps-scale .seg {
+    border: 0.6pt solid var(--ps-grid); background: var(--ps-tint-soft);
+    text-align: center; padding: 4pt 2pt; margin-left: -0.6pt;
+  }
+  .ps-scale .seg:first-child { margin-left: 0; }
+  .ps-scale .seg .c { display: block; font-size: 9.5pt; font-weight: 700; color: var(--ps-accent-dark); }
+  .ps-scale .seg .r { display: block; font-size: 6pt; color: var(--ps-gray); margin-top: 2pt; }
+  .ps-scale .seg .n { display: block; font-size: 5.5pt; color: var(--ps-gray); }
+  .ps-scale .seg.active {
+    background: var(--ps-select); border-color: var(--ps-select);
+  }
+  .ps-scale .seg.active .c, .ps-scale .seg.active .r, .ps-scale .seg.active .n { color: #fff; }
+
+  .ps-result-card {
+    border: 0.8pt solid var(--ps-accent); border-radius: 8pt; background: var(--ps-tint-soft);
+    padding: 9pt 10pt; margin-bottom: 12pt;
+  }
+  .ps-result-top { display: flex; align-items: baseline; gap: 14pt; }
+  .ps-score-num { font-size: 24pt; font-weight: 700; color: var(--ps-accent-dark); }
+  .ps-score-den { font-size: 8pt; font-weight: 700; color: var(--ps-gray); margin-left: 3pt; }
+  .ps-score-label { font-size: 5.5pt; font-weight: 700; color: var(--ps-gray); display: block; margin-bottom: 2pt; }
+  .ps-class { font-size: 11.5pt; font-weight: 700; color: var(--ps-select); }
+  .ps-desc { font-size: 8pt; font-weight: 700; color: #1e1e1e; margin-top: 1pt; }
+  .ps-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 4pt; margin-top: 9pt; }
+  .ps-metrics label { display: block; font-size: 5.5pt; font-weight: 700; color: var(--ps-gray); }
+  .ps-metrics div { font-size: 8.5pt; font-weight: 700; color: #1e1e1e; margin-top: 1pt; }
+
+  .ps-plano {
+    border: 0.8pt dashed var(--ps-accent); border-radius: 4pt; min-height: 140pt;
+    display: flex; align-items: center; justify-content: center; color: var(--ps-gray);
+    font-size: 8pt; text-align: center; overflow: hidden;
+  }
+  .ps-plano.has-img { border-style: solid; border-color: rgba(36,88,202,0.35); padding: 4pt; }
+  .ps-plano img { max-width: 100%; max-height: 190pt; object-fit: contain; }
+
+  .ps-footer {
+    display: flex; justify-content: space-between; border-top: 0.4pt solid var(--ps-grid);
+    margin-top: 10pt; padding-top: 4pt; font-size: 6.5pt; color: var(--ps-gray);
+  }
+  /* ---- Modal "Datos del reporte" (calca FichaExportSheet.swift) ---- */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none;
+    align-items: center; justify-content: center; z-index: 50; padding: 24px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--content-bg); border-radius: 18px; width: 100%; max-width: 620px;
+    max-height: 88vh; display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  }
+  .report-box { max-width: 400px; }
+  .report-head { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 28px 24px 22px; text-align: center; }
+  .report-icon-badge { width: 52px; height: 52px; border-radius: 50%; background: var(--icon-tint); display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
+  .report-icon-badge svg { width: 22px; height: 22px; color: var(--accent); }
+  .report-head .t { font-size: 17px; font-weight: 700; }
+  .report-head .d { font-size: 12px; color: var(--text-secondary); }
+  .report-body { padding: 0 24px; display: flex; flex-direction: column; gap: 14px; }
+  .report-field label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+  .report-field label svg { width: 14px; height: 14px; color: var(--text-secondary); flex: 0 0 auto; }
+  .report-field input[type="text"], .report-field input[type="date"] {
+    width: 100%; box-sizing: border-box; font-family: inherit; font-size: 13px;
+    padding: 10px 12px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--accent) 15%, var(--card-border));
+    background: var(--content-bg); color: var(--text-primary);
+  }
+  .report-field input:focus { outline: none; border-color: var(--accent); }
+  .report-footer { display: flex; gap: 12px; padding: 24px; }
+  .report-footer button {
+    flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 7px;
+    font-family: inherit; font-size: 13.5px; font-weight: 600; border: none; border-radius: 999px;
+    padding: 11px 16px; cursor: pointer;
+  }
+  .report-footer button svg { width: 15px; height: 15px; }
+  .report-footer .btn-secondary { background: var(--hover-fill); color: var(--text-primary); }
+  .report-footer .btn-primary { background: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="titlebar titlebar--module">
+    <div class="titlebar-mid">
+      <div class="titlebar-title">RMR Bieniawski</div>
+      <div class="titlebar-actions">
+        <button class="tb-icon" id="btnInicio" title="Inicio" aria-label="Inicio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h5v-6h2v6h5v-9"/>
+          </svg>
+        </button>
+        <button class="tb-icon" id="btnNuevo" title="Nuevo" aria-label="Nuevo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M13 3v5h5"/>
+          </svg>
+          <span class="badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>
+          </span>
+        </button>
+        <button class="tb-icon" id="btnAbrir" title="Abrir" aria-label="Abrir">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+            <path d="M3,7 L3,19 L21,19 L21,9 L11,9 L9,7 Z"/>
+          </svg>
+        </button>
+        <button class="tb-icon" id="btnGuardar" title="Guardar" aria-label="Guardar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h6V3"/><path d="M7 21v-7h10v7"/>
+          </svg>
+        </button>
+        <button class="tb-icon" id="btnGuardarComo" title="Guardar como…" aria-label="Guardar como…">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h6V3"/><path d="M7 21v-7h10v7"/>
+          </svg>
+          <span class="badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z" fill="currentColor"/></svg>
+          </span>
+        </button>
+      </div>
+      <input type="file" accept="application/json" id="abrirInput" style="display:none;">
+    </div>
+    <button class="tb-export" id="btnExportar" title="Exportar PDF" aria-label="Exportar PDF">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+    </button>
+  </div>
+
+  <div class="content">
+      <div class="content-inner" style="max-width: 1180px;">
+
+        <div class="module-header">
+          <div class="icon-box">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <rect x="2" y="2" width="8" height="8" rx="2"/><rect x="14" y="2" width="8" height="8" rx="2"/>
+              <rect x="2" y="14" width="8" height="8" rx="2"/><rect x="14" y="14" width="8" height="8" rx="2"/>
+            </svg>
+          </div>
+          <div>
+            <h1>RMR Bieniawski</h1>
+            <p>Clasificación Rock Mass Rating (Bieniawski, 1989).</p>
+          </div>
+        </div>
+
+        <div class="module-body">
+          <!-- ============ Columna izquierda: formulario ============ -->
+          <div>
+            <details class="panel param-card" id="card-ucs" open>
+              <summary>
+                <div class="param-head">
+                  <div class="param-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>
+                  </div>
+                  <div class="param-title">Resistencia de la roca intacta (UCS)</div>
+                  <div class="param-badge" id="badge-ucs">— pts</div>
+                  <svg class="param-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+              </summary>
+              <div class="param-content">
+                <div class="chip-row" data-table="ucs" data-field="ucs" data-next="card-rqd"></div>
+              </div>
+            </details>
+
+            <details class="panel param-card" id="card-rqd">
+              <summary>
+                <div class="param-head">
+                  <div class="param-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20V10M9 20V4M15 20v-7M21 20V8"/></svg>
+                  </div>
+                  <div class="param-title">RQD — Rock Quality Designation</div>
+                  <div class="param-badge" id="badge-rqd">— pts</div>
+                  <svg class="param-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+              </summary>
+              <div class="param-content">
+                <div class="chip-row" data-table="rqd" data-field="rqd" data-next="card-espaciado"></div>
+              </div>
+            </details>
+
+            <details class="panel param-card" id="card-espaciado">
+              <summary>
+                <div class="param-head">
+                  <div class="param-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4"/></svg>
+                  </div>
+                  <div class="param-title">Espaciado de discontinuidades</div>
+                  <div class="param-badge" id="badge-espaciado">— pts</div>
+                  <svg class="param-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+              </summary>
+              <div class="param-content">
+                <div class="chip-row" data-table="espaciado" data-field="espaciado" data-next="card-condicion"></div>
+              </div>
+            </details>
+
+            <details class="panel param-card" id="card-condicion">
+              <summary>
+                <div class="param-head">
+                  <div class="param-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                  </div>
+                  <div class="param-title">Condición de discontinuidades</div>
+                  <div class="param-badge" id="badge-condicion">— pts</div>
+                  <svg class="param-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+              </summary>
+              <div class="param-content">
+                <div class="param-sub">
+                  <p class="param-sub-label">Persistencia</p>
+                  <div class="chip-row" data-table="persistencia" data-field="persistencia"></div>
+                </div>
+                <div class="param-sub">
+                  <p class="param-sub-label">Apertura</p>
+                  <div class="chip-row" data-table="apertura" data-field="apertura"></div>
+                </div>
+                <div class="param-sub">
+                  <p class="param-sub-label">Rugosidad</p>
+                  <div class="chip-row" data-table="rugosidad" data-field="rugosidad"></div>
+                </div>
+                <div class="param-sub">
+                  <p class="param-sub-label">Relleno</p>
+                  <div class="chip-row" data-table="relleno" data-field="relleno"></div>
+                </div>
+                <div class="param-sub">
+                  <p class="param-sub-label">Intemperización</p>
+                  <div class="chip-row" data-table="intemperizacion" data-field="intemperizacion" data-next="card-agua"></div>
+                </div>
+              </div>
+            </details>
+
+            <details class="panel param-card" id="card-agua">
+              <summary>
+                <div class="param-head">
+                  <div class="param-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s7 8 7 13a7 7 0 0 1-14 0c0-5 7-13 7-13Z"/></svg>
+                  </div>
+                  <div class="param-title">Agua subterránea</div>
+                  <div class="param-badge" id="badge-agua">— pts</div>
+                  <svg class="param-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+              </summary>
+              <div class="param-content">
+                <div class="chip-row" data-table="agua" data-field="agua" data-next="card-orientacion"></div>
+              </div>
+            </details>
+
+            <details class="panel param-card" id="card-orientacion">
+              <summary>
+                <div class="param-head">
+                  <div class="param-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6m0 8v6m10-10h-6M8 12H2m14.9-6.9-4.24 4.24M9.34 14.66l-4.24 4.24m0-13.8 4.24 4.24m5.32 5.32 4.24 4.24"/></svg>
+                  </div>
+                  <div class="param-title">Ajuste por orientación del túnel</div>
+                  <div class="param-badge" id="badge-orientacion">— pts</div>
+                  <svg class="param-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+              </summary>
+              <div class="param-content">
+                <div class="chip-row" data-table="orientacion" data-field="orientacion" data-close="true"></div>
+                <div class="orientation-ref">
+                  <img src="../assets/AjusteOrientacionRMR.png" alt="Ajuste por orientación RMR: rumbo y buzamiento de discontinuidades">
+                  <p>Compara el rumbo y buzamiento de las discontinuidades principales con el eje de la excavación para elegir la favorabilidad.</p>
+                </div>
+              </div>
+            </details>
+
+            <div class="panel">
+              <div class="plano-head">
+                <div class="param-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m3 15 4.5-4.5a2 2 0 0 1 2.8 0L15 15M13 13l1.5-1.5a2 2 0 0 1 2.8 0L21 15"/></svg>
+                </div>
+                <div class="param-title">Plano de referencia</div>
+                <button class="plano-clear" id="planoClear" title="Quitar imagen" aria-label="Quitar imagen">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <div class="drop-zone" id="planoDrop">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                <span>Arrastra una imagen aquí<br>o hacé clic para importar</span>
+              </div>
+              <input type="file" accept="image/*" id="planoInput" style="display:none;">
+            </div>
+          </div>
+
+          <!-- ============ Columna derecha: resultado ============ -->
+          <div class="result-sticky">
+            <div class="panel score-card">
+              <div class="gauge-wrap">
+                <svg viewBox="0 0 120 120">
+                  <circle class="gauge-track" cx="60" cy="60" r="52"/>
+                  <circle class="gauge-value" id="gaugeValue" cx="60" cy="60" r="52" pathLength="100" stroke-dasharray="0 100"/>
+                </svg>
+                <div class="gauge-center">
+                  <div class="num" id="scoreNum">0</div>
+                  <div class="den">/ 100</div>
+                </div>
+              </div>
+              <div class="score-class" id="scoreClass">Clase —</div>
+              <div class="score-desc" id="scoreDesc">—</div>
+              <div class="risk-pill" id="riskPill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 4v6c0 5-3.5 8.5-9 10-5.5-1.5-9-5-9-10V6l9-4Z"/></svg>
+                <span id="riskLabel">—</span>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="barton-row">
+                <div class="param-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3 21 7l-4 4M21 7H9M7 21l-4-4 4-4M3 17h12"/></svg>
+                </div>
+                <div class="barton-text">
+                  <div class="t1">Equivalencia índice Q</div>
+                  <div class="t2">RMR = 9·ln(Q) + 44</div>
+                </div>
+                <div class="barton-value" id="qBartonValue">—</div>
+              </div>
+            </div>
+
+            <details class="panel collapsible" open>
+              <summary>
+                <svg class="s-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+                <span class="s-title">Desglose de puntuaciones</span>
+                <svg class="s-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </summary>
+              <div class="s-body" id="breakdownBody"></div>
+            </details>
+
+            <details class="panel collapsible" open>
+              <summary>
+                <svg class="s-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+                <span class="s-title">Clases de macizo rocoso</span>
+                <svg class="s-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </summary>
+              <div class="s-body" id="classesBody"></div>
+            </details>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="printSheet"></div>
+
+<div class="modal-overlay" id="reportModalOverlay">
+  <div class="modal-box report-box">
+    <div class="report-head">
+      <div class="report-icon-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
+      </div>
+      <div class="t">Datos del reporte</div>
+      <div class="d">Se incluirán en la ficha antes de generar el PDF.</div>
+    </div>
+    <div class="report-body">
+      <div class="report-field">
+        <label><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.4 0-9 2.2-9 5v3h18v-3c0-2.8-4.6-5-9-5Z"/></svg>Elaborado por:</label>
+        <input type="text" id="rdElaborado">
+      </div>
+      <div class="report-field">
+        <label><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 21V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v17M4 21h16M14 21v-6h5a1 1 0 0 1 1 1v5M7 6h2M11 6h2M7 10h2M11 10h2M7 14h2M11 14h2"/></svg>Unidad minera:</label>
+        <input type="text" id="rdUnidad">
+      </div>
+      <div class="report-field">
+        <label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6.5 3 3-8.5 8.5-4 1 1-4Z"/><path d="m12.5 8.5 3 3"/><path d="M2.5 21.5h5"/></svg>Labor:</label>
+        <input type="text" id="rdLabor">
+      </div>
+      <div class="report-field">
+        <label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>Nivel:</label>
+        <input type="text" id="rdNivel">
+      </div>
+      <div class="report-field">
+        <label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16.5" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>Fecha de elaboración:</label>
+        <input type="date" id="rdFecha">
+      </div>
+    </div>
+    <div class="report-footer">
+      <button class="btn-secondary" id="btnCancelarReporte" type="button">Cancelar</button>
+      <button class="btn-primary" id="btnDescargarReporte" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        Guardar PDF
+      </button>
+    </div>
+  </div>
+</div>
+<script>function _0x1363(_0x2793f6,_0x1f2c9f){_0x2793f6=_0x2793f6-0x147;var _0x7eb09=_0x7eb0();var _0x1363e2=_0x7eb09[_0x2793f6];return _0x1363e2;}(function(_0x147c22,_0x1d90a4){var _0x3ab287=_0x1363,_0x5a6073=_0x147c22();while(!![]){try{var _0x1cd9f2=-parseInt(_0x3ab287(0x21e))/0x1*(parseInt(_0x3ab287(0x14b))/0x2)+parseInt(_0x3ab287(0x1a1))/0x3*(-parseInt(_0x3ab287(0x234))/0x4)+parseInt(_0x3ab287(0x165))/0x5*(parseInt(_0x3ab287(0x254))/0x6)+-parseInt(_0x3ab287(0x16a))/0x7+-parseInt(_0x3ab287(0x21d))/0x8*(parseInt(_0x3ab287(0x218))/0x9)+parseInt(_0x3ab287(0x22c))/0xa*(parseInt(_0x3ab287(0x1aa))/0xb)+parseInt(_0x3ab287(0x1a7))/0xc;if(_0x1cd9f2===_0x1d90a4)break;else _0x5a6073['push'](_0x5a6073['shift']());}catch(_0x4b929d){_0x5a6073['push'](_0x5a6073['shift']());}}}(_0x7eb0,0xe44cb),(function(){var _0x10bf77=_0x1363,_0x520bb8={'ucs':[{'rango':_0x10bf77(0x161),'puntaje':0xf},{'rango':_0x10bf77(0x1ab),'puntaje':0xc},{'rango':_0x10bf77(0x25b),'puntaje':0x7},{'rango':_0x10bf77(0x1e5),'puntaje':0x4},{'rango':_0x10bf77(0x1b3),'puntaje':0x2},{'rango':'1\x20–\x205\x20MPa','puntaje':0x1},{'rango':_0x10bf77(0x25d),'puntaje':0x0}],'rqd':[{'rango':_0x10bf77(0x197),'puntaje':0x14},{'rango':_0x10bf77(0x1d6),'puntaje':0x11},{'rango':_0x10bf77(0x1a5),'puntaje':0xd},{'rango':_0x10bf77(0x1f6),'puntaje':0x8},{'rango':_0x10bf77(0x1ed),'puntaje':0x3}],'espaciado':[{'rango':_0x10bf77(0x155),'puntaje':0x14},{'rango':_0x10bf77(0x1de),'puntaje':0xf},{'rango':_0x10bf77(0x174),'puntaje':0xa},{'rango':_0x10bf77(0x243),'puntaje':0x8},{'rango':_0x10bf77(0x14c),'puntaje':0x5}],'persistencia':[{'rango':'<\x201\x20m\x20de\x20longitud','puntaje':0x6},{'rango':_0x10bf77(0x219),'puntaje':0x4},{'rango':_0x10bf77(0x252),'puntaje':0x2},{'rango':_0x10bf77(0x249),'puntaje':0x1},{'rango':_0x10bf77(0x158),'puntaje':0x0}],'apertura':[{'rango':'Cerrada','puntaje':0x6},{'rango':_0x10bf77(0x164),'puntaje':0x5},{'rango':_0x10bf77(0x255),'puntaje':0x3},{'rango':'1\x20–\x205\x20mm','puntaje':0x1},{'rango':_0x10bf77(0x240),'puntaje':0x0}],'rugosidad':[{'rango':_0x10bf77(0x1b1),'puntaje':0x6},{'rango':_0x10bf77(0x156),'puntaje':0x5},{'rango':_0x10bf77(0x221),'puntaje':0x3},{'rango':_0x10bf77(0x212),'puntaje':0x1},{'rango':_0x10bf77(0x23c),'puntaje':0x0}],'relleno':[{'rango':_0x10bf77(0x19a),'puntaje':0x6},{'rango':_0x10bf77(0x1b8),'puntaje':0x4},{'rango':_0x10bf77(0x21f),'puntaje':0x2},{'rango':'Relleno\x20suave\x20<\x205\x20mm','puntaje':0x2},{'rango':'Relleno\x20suave\x20>\x205\x20mm','puntaje':0x0}],'intemperizacion':[{'rango':_0x10bf77(0x22e),'puntaje':0x6},{'rango':'Ligeramente\x20intemperizada','puntaje':0x5},{'rango':_0x10bf77(0x193),'puntaje':0x3},{'rango':'Muy\x20intemperizada','puntaje':0x1},{'rango':_0x10bf77(0x268),'puntaje':0x0}],'agua':[{'rango':'Seco','puntaje':0xf},{'rango':'Húmedo','puntaje':0xa},{'rango':_0x10bf77(0x25f),'puntaje':0x7},{'rango':_0x10bf77(0x22f),'puntaje':0x4},{'rango':_0x10bf77(0x23e),'puntaje':0x0}],'orientacion':[{'rango':_0x10bf77(0x1c6),'puntaje':0x0},{'rango':_0x10bf77(0x16e),'puntaje':-0x2},{'rango':_0x10bf77(0x20a),'puntaje':-0x5},{'rango':_0x10bf77(0x23f),'puntaje':-0xa},{'rango':_0x10bf77(0x185),'puntaje':-0xc}]},_0x4e3c83={'ucs':0x1,'rqd':0x1,'espaciado':0x1,'persistencia':0x2,'apertura':0x2,'rugosidad':0x1,'relleno':0x0,'intemperizacion':0x1,'agua':0x1,'orientacion':0x2},_0x486a9d=[{'numero':'I','rango':_0x10bf77(0x1a8),'descripcion':_0x10bf77(0x154),'min':0x51},{'numero':'II','rango':_0x10bf77(0x194),'descripcion':_0x10bf77(0x1cd),'min':0x3d},{'numero':_0x10bf77(0x1f2),'rango':_0x10bf77(0x1c4),'descripcion':_0x10bf77(0x259),'min':0x29},{'numero':'IV','rango':_0x10bf77(0x20b),'descripcion':_0x10bf77(0x1bb),'min':0x15},{'numero':'V','rango':_0x10bf77(0x24a),'descripcion':_0x10bf77(0x1fd),'min':-Infinity}];function _0x2065e2(_0x4f49b5){var _0x481bd5=_0x10bf77;for(var _0x1b7536=0x0;_0x1b7536<_0x486a9d[_0x481bd5(0x1ec)];_0x1b7536++){if(_0x4f49b5>=_0x486a9d[_0x1b7536]['min'])return _0x486a9d[_0x1b7536];}return _0x486a9d[_0x486a9d[_0x481bd5(0x1ec)]-0x1];}function _0x26c3f7(_0x25f47d){var _0x1f84c5=_0x10bf77;if(_0x25f47d>=0x3d)return{'key':_0x1f84c5(0x246),'label':_0x1f84c5(0x1f0)};if(_0x25f47d>=0x29)return{'key':_0x1f84c5(0x199),'label':_0x1f84c5(0x163)};if(_0x25f47d>=0x15)return{'key':'high','label':_0x1f84c5(0x173)};return{'key':_0x1f84c5(0x257),'label':_0x1f84c5(0x1d7)};}function _0x323b54(_0x4ce758,_0x3d2498,_0xfcf67f){var _0x150602=_0x10bf77;return Math[_0x150602(0x1eb)](_0x3d2498,Math[_0x150602(0x1c0)](_0xfcf67f,_0x4ce758));}var _0x5e3159=0xdc,_0x204fa8='cubic-bezier(0.22,\x201,\x200.36,\x201)';function _0x569798(_0x27adfd){var _0x3ee148=_0x10bf77;this['el']=_0x27adfd,this['summary']=_0x27adfd[_0x3ee148(0x1bf)](_0x3ee148(0x264)),this[_0x3ee148(0x203)]=null,this[_0x3ee148(0x170)]=![],this[_0x3ee148(0x210)]=![];var _0x17e8a9=this;this[_0x3ee148(0x15a)][_0x3ee148(0x22d)](_0x3ee148(0x1c8),function(_0x5c838c){var _0x122c00=_0x3ee148;_0x5c838c[_0x122c00(0x26a)](),_0x17e8a9[_0x122c00(0x253)]();});}_0x569798['prototype'][_0x10bf77(0x253)]=function(){var _0xd99f1=_0x10bf77;if(this[_0xd99f1(0x170)]||!this['isExpanding']&&this['el']['open'])this['shrink']();else this[_0xd99f1(0x223)]();};function _0x46a85e(_0x7c513d){var _0x5f75c=_0x10bf77,_0x4fc627=getComputedStyle(_0x7c513d);return parseFloat(_0x4fc627['paddingTop'])+parseFloat(_0x4fc627[_0x5f75c(0x14e)])+parseFloat(_0x4fc627['borderTopWidth'])+parseFloat(_0x4fc627['borderBottomWidth']);}_0x569798['prototype'][_0x10bf77(0x245)]=function(){var _0x226ead=_0x10bf77;return this['el'][_0x226ead(0x1bf)](_0x226ead(0x24f));},_0x569798['prototype']['closedHeight']=function(){var _0x451f5e=_0x10bf77;return this[_0x451f5e(0x15a)][_0x451f5e(0x183)]+_0x46a85e(this['el']);},_0x569798['prototype']['openHeight']=function(){var _0x423595=_0x10bf77;return this['summary']['offsetHeight']+this[_0x423595(0x245)]()[_0x423595(0x183)]+_0x46a85e(this['el']);},_0x569798[_0x10bf77(0x1ce)]['open']=function(){var _0x7684e8=_0x10bf77;if(this['el'][_0x7684e8(0x223)])return;this['el'][_0x7684e8(0x1d1)][_0x7684e8(0x1d8)]=this[_0x7684e8(0x1b4)]()+'px',this['el'][_0x7684e8(0x223)]=!![];var _0x38d37a=this;window[_0x7684e8(0x200)](function(){var _0x588294=_0x7684e8;_0x38d37a[_0x588294(0x225)]();});},_0x569798[_0x10bf77(0x1ce)][_0x10bf77(0x225)]=function(){var _0x30b936=_0x10bf77;this['isExpanding']=!![],this['el'][_0x30b936(0x267)][_0x30b936(0x1f3)](_0x30b936(0x1e3));var _0x43962e=this['el'][_0x30b936(0x183)]+'px',_0xc227a0=this[_0x30b936(0x180)]()+'px';if(this['animation'])this[_0x30b936(0x203)]['cancel']();this[_0x30b936(0x203)]=this['el'][_0x30b936(0x16d)]({'height':[_0x43962e,_0xc227a0]},{'duration':_0x5e3159,'easing':_0x204fa8});var _0x498054=this;this[_0x30b936(0x203)][_0x30b936(0x23d)]=function(){var _0x2cb01c=_0x30b936;_0x498054[_0x2cb01c(0x204)](!![]);},this[_0x30b936(0x203)][_0x30b936(0x24e)]=function(){var _0x5019c6=_0x30b936;_0x498054[_0x5019c6(0x210)]=![];};},_0x569798['prototype']['shrink']=function(_0xbcf159){var _0x3532a3=_0x10bf77;if(!this['el'][_0x3532a3(0x223)]){if(_0xbcf159)_0xbcf159();return;}this['isClosing']=!![],this['el'][_0x3532a3(0x267)][_0x3532a3(0x1f3)](_0x3532a3(0x1e3));var _0x5db7f5=this['el'][_0x3532a3(0x183)]+'px',_0x14a77b=this['closedHeight']()+'px';if(this[_0x3532a3(0x203)])this[_0x3532a3(0x203)][_0x3532a3(0x1a4)]();this['animation']=this['el']['animate']({'height':[_0x5db7f5,_0x14a77b]},{'duration':_0x5e3159,'easing':_0x204fa8});var _0x5e3317=this;this['animation'][_0x3532a3(0x23d)]=function(){_0x5e3317['onFinish'](![]);if(_0xbcf159)_0xbcf159();},this['animation'][_0x3532a3(0x24e)]=function(){var _0x4c6943=_0x3532a3;_0x5e3317[_0x4c6943(0x170)]=![];};},_0x569798['prototype'][_0x10bf77(0x204)]=function(_0x2ae1e0){var _0x29b179=_0x10bf77;this['el'][_0x29b179(0x223)]=_0x2ae1e0,this[_0x29b179(0x203)]=null,this['isClosing']=![],this[_0x29b179(0x210)]=![],this['el'][_0x29b179(0x1d1)][_0x29b179(0x1d8)]='',this['el']['classList'][_0x29b179(0x1b5)]('animating');};var _0x17767d={};function _0x4973e2(){var _0x56b721=_0x10bf77;document['querySelectorAll'](_0x56b721(0x19b))[_0x56b721(0x1f8)](function(_0x214600){var _0x1b2f99=_0x56b721;_0x17767d[_0x214600['id']||_0x1b2f99(0x209)+Object['keys'](_0x17767d)['length']]=new _0x569798(_0x214600);if(!_0x214600['id'])_0x214600['dataset'][_0x1b2f99(0x1b0)]=_0x1b2f99(0x209)+(Object[_0x1b2f99(0x21b)](_0x17767d)['length']-0x1);});}function _0x49e928(_0x5e57db){var _0x30a495=_0x10bf77;return _0x17767d[_0x5e57db['id']]||_0x17767d[_0x5e57db[_0x30a495(0x25c)][_0x30a495(0x1b0)]];}function _0x5beb13(){var _0x386094=_0x10bf77;document[_0x386094(0x256)](_0x386094(0x23b))[_0x386094(0x1f8)](function(_0x1ccaf0){var _0x179836=_0x386094,_0x1aaf36=_0x520bb8[_0x1ccaf0[_0x179836(0x25c)]['table']],_0x33f0d8=_0x1ccaf0[_0x179836(0x25c)][_0x179836(0x23a)];_0x1aaf36[_0x179836(0x1f8)](function(_0x308e99,_0x1fbd7f){var _0x429509=_0x179836,_0xb5d20b=document[_0x429509(0x15d)]('button');_0xb5d20b['type']=_0x429509(0x258),_0xb5d20b['className']=_0x429509(0x1fc),_0xb5d20b[_0x429509(0x25a)]='<span>'+_0x308e99[_0x429509(0x14d)]+'</span><span\x20class=\x22chip-pts\x22>'+_0x308e99[_0x429509(0x238)]+_0x429509(0x248),_0xb5d20b[_0x429509(0x22d)]('click',function(){var _0x472e6f=_0x429509;_0x4e3c83[_0x33f0d8]=_0x1fbd7f,_0x14747b(_0x1ccaf0);var _0x5a02fd=_0x1ccaf0[_0x472e6f(0x25c)][_0x472e6f(0x18e)];function _0x500778(){var _0x19abbf=_0x472e6f;if(!_0x5a02fd)return;var _0x135c14=document[_0x19abbf(0x192)](_0x5a02fd),_0x41b7fd=_0x135c14&&_0x49e928(_0x135c14);if(_0x41b7fd)_0x41b7fd[_0x19abbf(0x223)]();}if(_0x5a02fd||_0x1ccaf0['dataset'][_0x472e6f(0x22b)]===_0x472e6f(0x20d)){var _0x19eeca=_0x49e928(_0x1ccaf0[_0x472e6f(0x151)](_0x472e6f(0x1e1)));if(_0x19eeca)_0x19eeca['shrink'](_0x500778);else _0x500778();}else _0x500778();window[_0x472e6f(0x200)](_0x262c2c);}),_0x1ccaf0[_0x429509(0x19e)](_0xb5d20b);}),_0x14747b(_0x1ccaf0);});}function _0x14747b(_0x37d00a){var _0x3832f4=_0x10bf77,_0x55970b=_0x37d00a[_0x3832f4(0x25c)]['field'],_0x4e33ea=_0x37d00a[_0x3832f4(0x256)](_0x3832f4(0x244));_0x4e33ea[_0x3832f4(0x1f8)](function(_0x344d99,_0x54b2e5){var _0xac95d0=_0x3832f4;_0x344d99[_0xac95d0(0x267)][_0xac95d0(0x253)]('active',_0x54b2e5===_0x4e3c83[_0x55970b]);});}function _0x262c2c(){var _0x6e6e08=_0x10bf77,_0x3a9fb2=_0x520bb8[_0x6e6e08(0x261)][_0x4e3c83['ucs']][_0x6e6e08(0x238)],_0x46b619=_0x520bb8[_0x6e6e08(0x1e8)][_0x4e3c83[_0x6e6e08(0x1e8)]][_0x6e6e08(0x238)],_0x249e45=_0x520bb8[_0x6e6e08(0x18d)][_0x4e3c83[_0x6e6e08(0x18d)]][_0x6e6e08(0x238)],_0x15895f=_0x520bb8[_0x6e6e08(0x176)][_0x4e3c83[_0x6e6e08(0x176)]][_0x6e6e08(0x238)],_0x45fc08=_0x520bb8[_0x6e6e08(0x14f)][_0x4e3c83[_0x6e6e08(0x14f)]][_0x6e6e08(0x238)],_0x32eef7=_0x520bb8[_0x6e6e08(0x17e)][_0x4e3c83[_0x6e6e08(0x17e)]][_0x6e6e08(0x238)],_0x4105d0=_0x520bb8[_0x6e6e08(0x188)][_0x4e3c83['relleno']]['puntaje'],_0x27e4d0=_0x520bb8[_0x6e6e08(0x1e9)][_0x4e3c83[_0x6e6e08(0x1e9)]]['puntaje'],_0x509352=_0x520bb8[_0x6e6e08(0x1a2)][_0x4e3c83['agua']][_0x6e6e08(0x238)],_0x3dd9d8=_0x520bb8[_0x6e6e08(0x1dc)][_0x4e3c83[_0x6e6e08(0x1dc)]][_0x6e6e08(0x238)],_0x2532fd=_0x15895f+_0x45fc08+_0x32eef7+_0x4105d0+_0x27e4d0;_0x24585c(_0x6e6e08(0x261),_0x3a9fb2),_0x24585c(_0x6e6e08(0x1e8),_0x46b619),_0x24585c(_0x6e6e08(0x18d),_0x249e45),_0x24585c(_0x6e6e08(0x18c),_0x2532fd),_0x24585c(_0x6e6e08(0x1a2),_0x509352),_0x24585c('orientacion',_0x3dd9d8);var _0x4adfe8=_0x323b54(_0x3a9fb2+_0x46b619+_0x249e45+_0x2532fd+_0x509352,0x0,0x64),_0x3082ce=_0x323b54(_0x4adfe8+_0x3dd9d8,0x0,0x64),_0x52e8fe=_0x2065e2(_0x3082ce),_0x4b94fb=_0x26c3f7(_0x3082ce),_0x144802=Math[_0x6e6e08(0x229)]((_0x3082ce-0x2c)/0x9),_0x23f4cb=document[_0x6e6e08(0x192)]('gaugeValue');_0x23f4cb[_0x6e6e08(0x1b9)](_0x6e6e08(0x21c),_0x3082ce+_0x6e6e08(0x189)),_0x23f4cb[_0x6e6e08(0x1d1)][_0x6e6e08(0x1b2)]=_0x6e6e08(0x18a)+_0x4b94fb[_0x6e6e08(0x250)]+')',document[_0x6e6e08(0x192)](_0x6e6e08(0x1ac))[_0x6e6e08(0x17a)]=Math['round'](_0x3082ce),document['getElementById']('scoreClass')[_0x6e6e08(0x17a)]='Clase\x20'+_0x52e8fe[_0x6e6e08(0x16f)],document['getElementById']('scoreDesc')['textContent']=_0x52e8fe['descripcion'];var _0x5e6576=document[_0x6e6e08(0x192)]('riskPill');_0x5e6576['style'][_0x6e6e08(0x19d)]='var(--risk-'+_0x4b94fb[_0x6e6e08(0x250)]+')',_0x5e6576[_0x6e6e08(0x1d1)][_0x6e6e08(0x172)]=_0x6e6e08(0x195)+_0x4b94fb[_0x6e6e08(0x250)]+')\x2015%,\x20transparent)',document[_0x6e6e08(0x192)]('riskLabel')[_0x6e6e08(0x17a)]=_0x4b94fb[_0x6e6e08(0x18b)],document[_0x6e6e08(0x192)]('qBartonValue')[_0x6e6e08(0x17a)]=_0x144802[_0x6e6e08(0x1d5)](0x2);var _0x4c2224=[[_0x6e6e08(0x1e2),_0x3a9fb2],[_0x6e6e08(0x24c),_0x46b619],[_0x6e6e08(0x1cf),_0x249e45],[_0x6e6e08(0x15f),_0x15895f],['Apertura',_0x45fc08],['Rugosidad',_0x32eef7],[_0x6e6e08(0x222),_0x4105d0],[_0x6e6e08(0x227),_0x27e4d0],[_0x6e6e08(0x213),_0x509352],[_0x6e6e08(0x1c3),_0x3dd9d8]];document[_0x6e6e08(0x192)]('breakdownBody')[_0x6e6e08(0x25a)]=_0x4c2224['map'](function(_0x685ee9){var _0x32e8c0=_0x6e6e08;return _0x32e8c0(0x224)+_0x685ee9[0x0]+_0x32e8c0(0x1cb)+_0x685ee9[0x1]+_0x32e8c0(0x1d3);})[_0x6e6e08(0x265)](''),document[_0x6e6e08(0x192)](_0x6e6e08(0x1be))[_0x6e6e08(0x25a)]=_0x486a9d[_0x6e6e08(0x24b)](function(_0x139204){var _0x172d1f=_0x6e6e08,_0x43b92b=_0x139204[_0x172d1f(0x16f)]===_0x52e8fe['numero'];return _0x172d1f(0x266)+(_0x43b92b?_0x172d1f(0x1d2):'')+'\x22>'+_0x172d1f(0x239)+_0x139204[_0x172d1f(0x16f)]+_0x172d1f(0x21a)+_0x139204[_0x172d1f(0x14d)]+'</span>'+_0x172d1f(0x1df)+_0x139204[_0x172d1f(0x215)]+'</span></div>';})['join']('');}function _0x24585c(_0x35ea2d,_0x2cfa4d){var _0x1211f7=_0x10bf77;document[_0x1211f7(0x192)](_0x1211f7(0x160)+_0x35ea2d)[_0x1211f7(0x17a)]=_0x2cfa4d+_0x1211f7(0x228);}function _0x1e957a(){var _0x5870cc=_0x10bf77,_0x47ace0=document[_0x5870cc(0x192)](_0x5870cc(0x20f)),_0xdaf7f9=document[_0x5870cc(0x192)](_0x5870cc(0x207)),_0x47e4f7=document[_0x5870cc(0x192)](_0x5870cc(0x208));function _0x4d78b7(_0x35c068){var _0x5f31ba=_0x5870cc;_0x47ace0[_0x5f31ba(0x25a)]='<img\x20src=\x22'+_0x35c068+_0x5f31ba(0x247),_0x47e4f7['classList'][_0x5f31ba(0x1f3)]('show');}function _0x123f4a(){var _0x4184fe=_0x5870cc;_0x47ace0['innerHTML']='<svg\x20viewBox=\x220\x200\x2024\x2024\x22\x20fill=\x22none\x22\x20stroke=\x22currentColor\x22\x20stroke-width=\x221.6\x22\x20stroke-linecap=\x22round\x22\x20stroke-linejoin=\x22round\x22><path\x20d=\x22M12\x203v12m0\x200-4-4m4\x204\x204-4M4\x2017v2a2\x202\x200\x200\x200\x202\x202h12a2\x202\x200\x200\x200\x202-2v-2\x22/></svg><span>Arrastra\x20una\x20imagen\x20aquí<br>o\x20hacé\x20clic\x20para\x20importar</span>',_0x47e4f7['classList']['remove'](_0x4184fe(0x1e4)),_0xdaf7f9[_0x4184fe(0x241)]='';}_0x1e957a[_0x5870cc(0x20e)]=_0x123f4a;function _0xe69f64(_0x28a3b9){var _0x467b4d=_0x5870cc;if(!_0x28a3b9||_0x28a3b9[_0x467b4d(0x1da)][_0x467b4d(0x233)](_0x467b4d(0x147))!==0x0)return;var _0x5c74b7=new FileReader();_0x5c74b7[_0x467b4d(0x235)]=function(_0x693a56){var _0x59462d=_0x467b4d;_0x4d78b7(_0x693a56[_0x59462d(0x1c1)][_0x59462d(0x159)]);},_0x5c74b7[_0x467b4d(0x187)](_0x28a3b9);}_0x47ace0[_0x5870cc(0x22d)](_0x5870cc(0x1c8),function(){var _0x21ddb9=_0x5870cc;_0xdaf7f9[_0x21ddb9(0x1c8)]();}),_0xdaf7f9[_0x5870cc(0x22d)](_0x5870cc(0x26e),function(){var _0x591d26=_0x5870cc;_0xe69f64(_0xdaf7f9[_0x591d26(0x230)][0x0]);}),['dragenter',_0x5870cc(0x17c)][_0x5870cc(0x1f8)](function(_0x3658df){var _0x4bd2c7=_0x5870cc;_0x47ace0[_0x4bd2c7(0x22d)](_0x3658df,function(_0x110c31){var _0x15d8d7=_0x4bd2c7;_0x110c31[_0x15d8d7(0x26a)](),_0x47ace0[_0x15d8d7(0x267)][_0x15d8d7(0x1f3)]('drag');});}),['dragleave',_0x5870cc(0x1f5)]['forEach'](function(_0x5e017b){_0x47ace0['addEventListener'](_0x5e017b,function(_0x1c1660){var _0x5166f1=_0x1363;_0x1c1660[_0x5166f1(0x26a)](),_0x47ace0[_0x5166f1(0x267)][_0x5166f1(0x1b5)](_0x5166f1(0x1d4));});}),_0x47ace0[_0x5870cc(0x22d)](_0x5870cc(0x1f5),function(_0x35a401){var _0xc3c3ae=_0x5870cc;if(_0x35a401[_0xc3c3ae(0x16b)][_0xc3c3ae(0x230)]&&_0x35a401['dataTransfer'][_0xc3c3ae(0x230)][0x0])_0xe69f64(_0x35a401[_0xc3c3ae(0x16b)][_0xc3c3ae(0x230)][0x0]);}),_0x47e4f7[_0x5870cc(0x22d)](_0x5870cc(0x1c8),function(_0x176f0a){var _0x1b8bc1=_0x5870cc;_0x176f0a[_0x1b8bc1(0x26c)](),_0x123f4a();});}var _0x3dc220={'ucs':0x1,'rqd':0x1,'espaciado':0x1,'persistencia':0x2,'apertura':0x2,'rugosidad':0x1,'relleno':0x0,'intemperizacion':0x1,'agua':0x1,'orientacion':0x2};function _0x1df019(){var _0x1e9734=_0x10bf77;document[_0x1e9734(0x256)](_0x1e9734(0x23b))[_0x1e9734(0x1f8)](_0x14747b);}function _0x26c1c4(_0x58667d,_0x128f03){var _0x5d3f65=_0x10bf77,_0x236092=new Blob([JSON['stringify']({'modulo':_0x5d3f65(0x26d),'seleccion':_0x128f03},null,0x2)],{'type':'application/json'}),_0x7ad70=URL[_0x5d3f65(0x1c2)](_0x236092),_0x3832cd=document['createElement']('a');_0x3832cd[_0x5d3f65(0x1db)]=_0x7ad70,_0x3832cd[_0x5d3f65(0x177)]=_0x58667d,document['body'][_0x5d3f65(0x19e)](_0x3832cd),_0x3832cd[_0x5d3f65(0x1c8)](),_0x3832cd[_0x5d3f65(0x1b5)](),URL[_0x5d3f65(0x184)](_0x7ad70);}function _0x4aeacc(_0x3e7bc8){var _0x35abe9=_0x10bf77;Object[_0x35abe9(0x21b)](_0x3dc220)[_0x35abe9(0x1f8)](function(_0xb035f){var _0x5efe69=_0x35abe9,_0x514679=_0x520bb8[_0xb035f],_0x373dd7=_0x3e7bc8[_0xb035f];if(typeof _0x373dd7==='number'&&_0x373dd7>=0x0&&_0x373dd7<_0x514679[_0x5efe69(0x1ec)])_0x4e3c83[_0xb035f]=_0x373dd7;}),_0x1df019(),_0x262c2c();}function _0x2bf456(){var _0x337f89=_0x10bf77;document[_0x337f89(0x192)]('btnInicio')[_0x337f89(0x22d)]('click',function(){var _0x15ce64=_0x337f89;window[_0x15ce64(0x152)][_0x15ce64(0x1db)]=_0x15ce64(0x237);}),document[_0x337f89(0x192)](_0x337f89(0x205))['addEventListener']('click',function(){var _0x5ca223=_0x337f89;window[_0x5ca223(0x223)](_0x5ca223(0x190),_0x5ca223(0x1ff));});var _0x1dee51=document[_0x337f89(0x192)](_0x337f89(0x1f9));document[_0x337f89(0x192)](_0x337f89(0x206))['addEventListener'](_0x337f89(0x1c8),function(){var _0x2bbabb=_0x337f89;_0x1dee51[_0x2bbabb(0x1c8)]();}),_0x1dee51[_0x337f89(0x22d)]('change',function(){var _0x32d2e8=_0x337f89,_0x4ce02a=_0x1dee51[_0x32d2e8(0x230)][0x0];if(!_0x4ce02a)return;var _0x5ba463=new FileReader();_0x5ba463[_0x32d2e8(0x235)]=function(_0x2d9000){var _0x5a6749=_0x32d2e8;try{var _0x49d26c=JSON[_0x5a6749(0x148)](_0x2d9000[_0x5a6749(0x1c1)][_0x5a6749(0x159)]);_0x4aeacc(_0x49d26c[_0x5a6749(0x19c)]||_0x49d26c);}catch(_0x475bdc){alert(_0x5a6749(0x168));}_0x1dee51['value']='';},_0x5ba463[_0x32d2e8(0x1af)](_0x4ce02a);}),document[_0x337f89(0x192)]('btnGuardar')[_0x337f89(0x22d)](_0x337f89(0x1c8),function(){var _0x21848a=_0x337f89;_0x26c1c4(_0x21848a(0x1a9),_0x4e3c83);}),document[_0x337f89(0x192)]('btnGuardarComo')[_0x337f89(0x22d)]('click',function(){var _0x288b9e=_0x337f89,_0x74a655=prompt('Guardar\x20como…',_0x288b9e(0x1c5));if(!_0x74a655)return;_0x26c1c4(_0x74a655[_0x288b9e(0x242)](/\.json$/i,'')+_0x288b9e(0x271),_0x4e3c83);}),document[_0x337f89(0x192)](_0x337f89(0x263))[_0x337f89(0x22d)]('click',function(){_0x1d170c();});var _0xd5a6d4=document[_0x337f89(0x192)](_0x337f89(0x25e));document[_0x337f89(0x192)]('btnCancelarReporte')['addEventListener'](_0x337f89(0x1c8),function(){var _0x173bef=_0x337f89;_0xd5a6d4[_0x173bef(0x267)][_0x173bef(0x1b5)](_0x173bef(0x1e4));}),_0xd5a6d4['addEventListener'](_0x337f89(0x1c8),function(_0x3bb127){var _0x4b3903=_0x337f89;if(_0x3bb127['target']===_0xd5a6d4)_0xd5a6d4[_0x4b3903(0x267)]['remove']('show');}),document['getElementById']('btnDescargarReporte')['addEventListener'](_0x337f89(0x1c8),function(){var _0x1c1ae9=_0x337f89;_0xd5a6d4[_0x1c1ae9(0x267)][_0x1c1ae9(0x1b5)](_0x1c1ae9(0x1e4)),_0x4e16d5({'elaborado':document[_0x1c1ae9(0x192)](_0x1c1ae9(0x1a6))[_0x1c1ae9(0x241)][_0x1c1ae9(0x150)](),'unidad':document[_0x1c1ae9(0x192)](_0x1c1ae9(0x162))[_0x1c1ae9(0x241)][_0x1c1ae9(0x150)](),'fecha':document[_0x1c1ae9(0x192)](_0x1c1ae9(0x17b))[_0x1c1ae9(0x241)],'labor':document[_0x1c1ae9(0x192)](_0x1c1ae9(0x191))[_0x1c1ae9(0x241)][_0x1c1ae9(0x150)](),'nivel':document[_0x1c1ae9(0x192)](_0x1c1ae9(0x1f7))['value'][_0x1c1ae9(0x150)]()});});}function _0x1d170c(){var _0xf9b931=_0x10bf77,_0x562d82=new Date(),_0x50550a=_0x562d82[_0xf9b931(0x1e6)]()+'-'+('0'+(_0x562d82[_0xf9b931(0x182)]()+0x1))[_0xf9b931(0x269)](-0x2)+'-'+('0'+_0x562d82[_0xf9b931(0x1dd)]())['slice'](-0x2);document[_0xf9b931(0x192)](_0xf9b931(0x17b))[_0xf9b931(0x241)]=_0x50550a,document[_0xf9b931(0x192)](_0xf9b931(0x25e))[_0xf9b931(0x267)][_0xf9b931(0x1f3)](_0xf9b931(0x1e4));}function _0x4e16d5(_0x61ff57){var _0x3e149d=_0x10bf77,_0x26ce3f=document[_0x3e149d(0x192)](_0x3e149d(0x263)),_0x167b8f=document[_0x3e149d(0x192)](_0x3e149d(0x262));_0x162db1(_0x61ff57),_0x26ce3f['disabled']=!![];var _0x25e573=_0x26ce3f[_0x3e149d(0x25a)];_0x26ce3f[_0x3e149d(0x25a)]=_0x26ce3f[_0x3e149d(0x25a)]['replace'](/Exportar PDF/,_0x3e149d(0x153)),_0x167b8f[_0x3e149d(0x267)][_0x3e149d(0x1f3)](_0x3e149d(0x1b6));var _0x14eda5=window['jspdf'][_0x3e149d(0x171)],_0x5cbb20=new _0x14eda5({'orientation':_0x3e149d(0x20c),'unit':'pt','format':'a4'}),_0x478987=_0x5cbb20[_0x3e149d(0x1f1)]['pageSize'][_0x3e149d(0x198)](),_0xbf0252=_0x5cbb20[_0x3e149d(0x1f1)][_0x3e149d(0x167)][_0x3e149d(0x260)]();window['html2canvas'](_0x167b8f,{'scale':0x3,'useCORS':!![],'windowWidth':_0x478987})[_0x3e149d(0x196)](function(_0xa3a40c){var _0x201d76=_0x3e149d,_0x49f54b=_0xa3a40c[_0x201d76(0x1cc)](_0x201d76(0x1ef),0.92),_0x5aa9e3=Math[_0x201d76(0x1c0)](_0xbf0252,_0xa3a40c[_0x201d76(0x1d8)]*_0x478987/_0xa3a40c['width']);_0x5cbb20[_0x201d76(0x232)](_0x49f54b,'JPEG',0x0,0x0,_0x478987,_0x5aa9e3),_0x167b8f['classList'][_0x201d76(0x1b5)](_0x201d76(0x1b6)),_0x5cbb20[_0x201d76(0x1ba)](_0x201d76(0x1d0)),_0x26ce3f['disabled']=![],_0x26ce3f[_0x201d76(0x25a)]=_0x25e573;});}function _0x3876d5(_0x1e9599){var _0x5888f6=_0x10bf77;return String(_0x1e9599==null?'':_0x1e9599)[_0x5888f6(0x242)](/[&<>]/g,function(_0x5db949){var _0x650b50=_0x5888f6;return _0x5db949==='&'?_0x650b50(0x214):_0x5db949==='<'?'&lt;':_0x650b50(0x1ad);});}function _0xe9dabb(_0x19f8cc){var _0x376b7c=_0x10bf77;if(_0x19f8cc){var _0x1de001=_0x19f8cc['split']('-');return _0x1de001[0x2]+'/'+_0x1de001[0x1]+'/'+_0x1de001[0x0];}var _0x3c7d1c=new Date();return String(_0x3c7d1c[_0x376b7c(0x1dd)]())[_0x376b7c(0x1a3)](0x2,'0')+'/'+String(_0x3c7d1c[_0x376b7c(0x182)]()+0x1)[_0x376b7c(0x1a3)](0x2,'0')+'/'+_0x3c7d1c[_0x376b7c(0x1e6)]();}function _0x162db1(_0x7b64ef){var _0x3b44f0=_0x10bf77;_0x7b64ef=_0x7b64ef||{};var _0xb873e5=_0x520bb8[_0x3b44f0(0x261)][_0x4e3c83[_0x3b44f0(0x261)]],_0x5e7626=_0x520bb8[_0x3b44f0(0x1e8)][_0x4e3c83[_0x3b44f0(0x1e8)]],_0x49e3c3=_0x520bb8[_0x3b44f0(0x18d)][_0x4e3c83[_0x3b44f0(0x18d)]],_0x343e29=_0x520bb8['persistencia'][_0x4e3c83[_0x3b44f0(0x176)]],_0x4c9519=_0x520bb8['apertura'][_0x4e3c83['apertura']],_0x2562c8=_0x520bb8[_0x3b44f0(0x17e)][_0x4e3c83[_0x3b44f0(0x17e)]],_0x130f49=_0x520bb8[_0x3b44f0(0x188)][_0x4e3c83[_0x3b44f0(0x188)]],_0x25b446=_0x520bb8[_0x3b44f0(0x1e9)][_0x4e3c83[_0x3b44f0(0x1e9)]],_0x2f5ec3=_0x520bb8[_0x3b44f0(0x1a2)][_0x4e3c83['agua']],_0x3219ce=_0x520bb8['orientacion'][_0x4e3c83[_0x3b44f0(0x1dc)]],_0x60969f=_0x323b54(_0xb873e5[_0x3b44f0(0x238)]+_0x5e7626[_0x3b44f0(0x238)]+_0x49e3c3['puntaje']+(_0x343e29['puntaje']+_0x4c9519[_0x3b44f0(0x238)]+_0x2562c8[_0x3b44f0(0x238)]+_0x130f49['puntaje']+_0x25b446[_0x3b44f0(0x238)])+_0x2f5ec3[_0x3b44f0(0x238)],0x0,0x64),_0x1fd886=_0x323b54(_0x60969f+_0x3219ce[_0x3b44f0(0x238)],0x0,0x64),_0x101a19=_0x2065e2(_0x1fd886),_0x3ef2b6=_0x26c3f7(_0x1fd886),_0x2ece1d=Math[_0x3b44f0(0x229)]((_0x1fd886-0x2c)/0x9);function _0x266eb3(_0x350707){return _0x350707>0x0?'+'+_0x350707:''+_0x350707;}var _0x10dc32=[[_0x3b44f0(0x1e2),_0xb873e5[_0x3b44f0(0x14d)],_0xb873e5['puntaje']],[_0x3b44f0(0x24c),_0x5e7626[_0x3b44f0(0x14d)],_0x5e7626[_0x3b44f0(0x238)]],[_0x3b44f0(0x1cf),_0x49e3c3[_0x3b44f0(0x14d)],_0x49e3c3[_0x3b44f0(0x238)]],[_0x3b44f0(0x15f),_0x343e29[_0x3b44f0(0x14d)],_0x343e29['puntaje']],[_0x3b44f0(0x1d9),_0x4c9519[_0x3b44f0(0x14d)],_0x4c9519[_0x3b44f0(0x238)]],['Rugosidad',_0x2562c8['rango'],_0x2562c8[_0x3b44f0(0x238)]],[_0x3b44f0(0x222),_0x130f49[_0x3b44f0(0x14d)],_0x130f49['puntaje']],[_0x3b44f0(0x227),_0x25b446[_0x3b44f0(0x14d)],_0x25b446['puntaje']],['Agua\x20subterránea',_0x2f5ec3[_0x3b44f0(0x14d)],_0x2f5ec3[_0x3b44f0(0x238)]],['Ajuste\x20por\x20orientación',_0x3219ce[_0x3b44f0(0x14d)],_0x3219ce[_0x3b44f0(0x238)]]],_0x472db8=_0x10dc32[_0x3b44f0(0x24b)](function(_0x37b9a3,_0x1c2e21){var _0x28bc00=_0x3b44f0;return'<tr\x20class=\x22'+(_0x1c2e21%0x2===0x1?'zebra':'')+'\x22>'+_0x28bc00(0x181)+_0x3876d5(_0x37b9a3[0x0])+_0x28bc00(0x175)+_0x3876d5(_0x37b9a3[0x1])+_0x28bc00(0x26b)+_0x266eb3(_0x37b9a3[0x2])+_0x28bc00(0x1c7);})[_0x3b44f0(0x265)]('');_0x472db8+=_0x3b44f0(0x1fe)+_0x266eb3(_0x60969f)+_0x3b44f0(0x1c7),_0x472db8+=_0x3b44f0(0x231)+_0x3876d5(_0x101a19[_0x3b44f0(0x16f)])+'\x20—\x20'+_0x3876d5(_0x101a19[_0x3b44f0(0x215)])+'</td><td\x20class=\x22pts\x22>'+Math[_0x3b44f0(0x17d)](_0x1fd886)+_0x3b44f0(0x186);var _0x562298=_0x486a9d['slice']()[_0x3b44f0(0x16c)]()['map'](function(_0x3bb148){var _0x523fb6=_0x3b44f0,_0x41653b=_0x3bb148[_0x523fb6(0x16f)]===_0x101a19[_0x523fb6(0x16f)];return _0x523fb6(0x1a0)+(_0x41653b?_0x523fb6(0x149):'')+'\x22>'+_0x523fb6(0x1ae)+_0x3876d5(_0x3bb148['numero'])+_0x523fb6(0x248)+_0x523fb6(0x202)+_0x3876d5(_0x3bb148[_0x523fb6(0x14d)])+_0x523fb6(0x248)+_0x523fb6(0x1ea)+_0x3876d5(_0x3bb148[_0x523fb6(0x215)][_0x523fb6(0x242)](_0x523fb6(0x236),''))+'</span></div>';})['join'](''),_0x2da251=document['querySelector'](_0x3b44f0(0x18f)),_0x2222e6=_0x2da251?_0x3b44f0(0x15e)+_0x2da251[_0x3b44f0(0x24d)]+_0x3b44f0(0x166):_0x3b44f0(0x178),_0x3b0bf8=[[_0x3b44f0(0x14a),_0x7b64ef[_0x3b44f0(0x1ee)]||''],['UNIDAD\x20MINERA',_0x7b64ef[_0x3b44f0(0x217)]||''],['LABOR',_0x7b64ef['labor']||''],['NIVEL',_0x7b64ef[_0x3b44f0(0x211)]||''],['FECHA\x20DE\x20ELABORACIÓN',_0xe9dabb(_0x7b64ef[_0x3b44f0(0x1e7)])]],_0x46c884=_0x3b0bf8[_0x3b44f0(0x24b)](function(_0x1e311b){var _0xf0b3f4=_0x3b44f0;return _0xf0b3f4(0x1ca)+_0x3876d5(_0x1e311b[0x0])+_0xf0b3f4(0x251)+_0x3876d5(_0x1e311b[0x1]||'—')+_0xf0b3f4(0x169);})[_0x3b44f0(0x265)](''),_0x509b10=''+_0x3b44f0(0x17f)+_0x3b44f0(0x1f4)+'<div\x20class=\x22ps-card\x22>'+_0x46c884+_0x3b44f0(0x201)+_0x3b44f0(0x220)+'<div\x20class=\x22ps-col-left\x22>'+_0x3b44f0(0x216)+_0x3b44f0(0x15b)+_0x3b44f0(0x26f)+_0x472db8+_0x3b44f0(0x1e0)+_0x3b44f0(0x1fa)+_0x3b44f0(0x179)+_0x562298+_0x3b44f0(0x201)+_0x3b44f0(0x201)+_0x3b44f0(0x157)+'<div\x20class=\x22ps-bar\x22>RESULTADO</div>'+_0x3b44f0(0x22a)+'<span\x20class=\x22ps-score-label\x22>PUNTAJE\x20RMR89</span>'+_0x3b44f0(0x15c)+_0x3b44f0(0x1bd)+Math['round'](_0x1fd886)+_0x3b44f0(0x270)+_0x3b44f0(0x1c9)+_0x3876d5(_0x101a19['numero'])+_0x3b44f0(0x201)+'<div\x20class=\x22ps-desc\x22>'+_0x3876d5(_0x101a19['descripcion'])+_0x3b44f0(0x169)+_0x3b44f0(0x201)+_0x3b44f0(0x226)+_0x3b44f0(0x19f)+_0x3876d5(_0x3ef2b6[_0x3b44f0(0x18b)])+_0x3b44f0(0x169)+_0x3b44f0(0x1b7)+_0x2ece1d[_0x3b44f0(0x1d5)](0x2)+_0x3b44f0(0x169)+_0x3b44f0(0x201)+_0x3b44f0(0x201)+_0x3b44f0(0x1bc)+_0x2222e6+_0x3b44f0(0x201)+_0x3b44f0(0x201)+_0x3b44f0(0x1fb);document[_0x3b44f0(0x192)](_0x3b44f0(0x262))[_0x3b44f0(0x25a)]=_0x509b10;}_0x4973e2(),_0x5beb13(),_0x1e957a(),_0x2bf456(),_0x262c2c();}()));function _0x7eb0(){var _0x15d907=['orientacion','getDate','0.6\x20–\x202\x20m','<span\x20class=\x22v\x22>','</tbody></table>','details','Resistencia\x20UCS','animating','show','25\x20–\x2050\x20MPa','getFullYear','fecha','rqd','intemperizacion','<span\x20class=\x22n\x22>','max','length','<\x2025\x20%','elaborado','image/jpeg','Bajo','internal','III','add','<p\x20class=\x22ps-subtitle\x22>Clasificación\x20Rock\x20Mass\x20Rating\x20(Bieniawski,\x201989)</p>','drop','25\x20%\x20–\x2050\x20%','rdNivel','forEach','abrirInput','<div\x20class=\x22ps-bar\x22>CLASE\x20DE\x20MACIZO\x20·\x20BIENIAWSKI\x20(1989)</div>','<div\x20class=\x22ps-footer\x22><span>RMR\x20Bieniawski</span><span>Página\x201</span></div>','chip','Roca\x20muy\x20mala','<tr\x20class=\x22total\x22><td>RMR\x20básico</td><td></td><td\x20class=\x22pts\x22>','_blank','requestAnimationFrame','</div>','<span\x20class=\x22r\x22>','animation','onFinish','btnNuevo','btnAbrir','planoInput','planoClear','acc-','Regular','21\x20–\x2040','landscape','true','limpiar','planoDrop','isExpanding','nivel','Lisa','Agua\x20subterránea','&amp;','descripcion','<div\x20class=\x22ps-bar\x22>VALORACIÓN\x20DE\x20PARÁMETROS\x20·\x20RMR89</div>','unidad','9dEbXbR','1\x20–\x203\x20m','\x20·\x20','keys','stroke-dasharray','7062456zqtduG','1097054sZVSXf','Relleno\x20duro\x20>\x205\x20mm','<div\x20class=\x22ps-columns\x22>','Ligeramente\x20rugosa','Relleno','open','<div\x20class=\x22breakdown-row\x22><span\x20class=\x22k\x22>','expand','<div\x20class=\x22ps-metrics\x22>','Intemperización','\x20pts','exp','<div\x20class=\x22ps-result-card\x22>','close','554970NdIbSO','addEventListener','Sana','Goteo','files','<tr\x20class=\x22highlight\x22><td>RMR89\x20corregido</td><td>','addImage','indexOf','4iejUXt','onload','Roca\x20','index.html','puntaje','<span\x20class=\x22k\x22>','field','.chip-row[data-table]','Pulida\x20(slickenside)','onfinish','Flujo','Desfavorable','>\x205\x20mm','value','replace','0.06\x20–\x200.2\x20m','.chip','contentEl','low','\x22\x20alt=\x22Plano\x20de\x20referencia\x22>','</span>','10\x20–\x2020\x20m','<\x2021','map','RQD','src','oncancel',':scope\x20>\x20.param-content,\x20:scope\x20>\x20.s-body','key','</label><div>','3\x20–\x2010\x20m','toggle','6hhvrcI','0.1\x20–\x201.0\x20mm','querySelectorAll','critical','button','Roca\x20regular','innerHTML','50\x20–\x20100\x20MPa','dataset','<\x201\x20MPa','reportModalOverlay','Mojado','getHeight','ucs','printSheet','btnExportar',':scope\x20>\x20summary','join','<div\x20class=\x22class-row','classList','Descompuesta','slice','preventDefault','</td><td\x20class=\x22pts\x22>','stopPropagation','rmr','change','<tbody>','<span\x20class=\x22ps-score-den\x22>/\x20100</span></span>','.json','image/','parse','\x20active','ELABORADO\x20POR','2zriVEj','<\x200.06\x20m','rango','paddingBottom','apertura','trim','closest','location','Generando…','Roca\x20muy\x20buena','>\x202\x20m','Rugosa','<div\x20class=\x22ps-col-right\x22>','>\x2020\x20m','result','summary','<table\x20class=\x22ps-table\x22><thead><tr><th>Parámetro</th><th>Categoría\x20seleccionada</th><th\x20class=\x22center\x22>Pts</th></tr></thead>','<div\x20class=\x22ps-result-top\x22>','createElement','<div\x20class=\x22ps-plano\x20has-img\x22><img\x20src=\x22','Persistencia','badge-','>\x20250\x20MPa','rdUnidad','Medio','<\x200.1\x20mm','5706940MXeelJ','\x22\x20alt=\x22Plano\x20de\x20referencia\x22></div>','pageSize','El\x20archivo\x20no\x20es\x20un\x20proyecto\x20RMR\x20válido.','</div></div>','640906WXYXuN','dataTransfer','reverse','animate','Favorable','numero','isClosing','jsPDF','background','Alto','0.2\x20–\x200.6\x20m','</td><td>','persistencia','download','<div\x20class=\x22ps-plano\x22>Sin\x20plano\x20de\x20referencia\x20adjunto</div>','<div\x20class=\x22ps-scale\x22>','textContent','rdFecha','dragover','round','rugosidad','<h1\x20class=\x22ps-title\x22>REPORTE\x20GEOMECÁNICO\x20—\x20RMR</h1>','openHeight','<td>','getMonth','offsetHeight','revokeObjectURL','Muy\x20desfavorable','\x20/\x20100</td></tr>','readAsDataURL','relleno','\x20100','var(--risk-','label','condicion','espaciado','next','#planoDrop\x20img','rmr.html','rdLabor','getElementById','Moderadamente\x20intemperizada','61\x20–\x2080','color-mix(in\x20srgb,\x20var(--risk-','then','90\x20%\x20–\x20100\x20%','getWidth','medium','Limpia,\x20sin\x20relleno','.param-card,\x20.collapsible','seleccion','color','appendChild','<div><label>Nivel\x20de\x20riesgo</label><div>','<div\x20class=\x22seg','2837073eUghxS','agua','padStart','cancel','50\x20%\x20–\x2075\x20%','rdElaborado','29734260DjnnBH','81\x20–\x20100','Proyecto\x20RMR.json','66WizBnt','100\x20–\x20250\x20MPa','scoreNum','&gt;','<span\x20class=\x22c\x22>','readAsText','accKey','Muy\x20rugosa','stroke','5\x20–\x2025\x20MPa','closedHeight','remove','ps-active','<div><label>Índice\x20Q\x20equiv.</label><div>','Relleno\x20duro\x20<\x205\x20mm','setAttribute','save','Roca\x20mala','<div\x20class=\x22ps-bar\x22>PLANO\x20DE\x20REFERENCIA</div>','<span\x20class=\x22ps-score-num\x22>','classesBody','querySelector','min','target','createObjectURL','Ajuste\x20por\x20orientación','41\x20–\x2060','Proyecto\x20RMR','Muy\x20favorable','</td></tr>','click','<div><div\x20class=\x22ps-class\x22>CLASE\x20','<div\x20class=\x22ps-f\x22><label>','</span><span\x20class=\x22v\x22>','toDataURL','Roca\x20buena','prototype','Espaciado\x20de\x20discontinuidades','Reporte\x20RMR.pdf','style','\x20current','</span></div>','drag','toFixed','75\x20%\x20–\x2090\x20%','Muy\x20Alto','height','Apertura','type','href'];_0x7eb0=function(){return _0x15d907;};return _0x7eb0();}</script>
+</body>
+</html>
