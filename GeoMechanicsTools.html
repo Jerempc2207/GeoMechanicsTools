@@ -1,148 +1,322 @@
 <!DOCTYPE html>
+<!--
+  GeoMechanics Tools
+  Elaborado por Jeremy Peñalva Cabrera (JVPC)
+  Contacto: jpenalvac@unsa.edu.pe
+-->
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeoMechanicsTools</title>
-    <link rel="icon" type="image/png" href="assets/app_icon.png">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
-            display: flex; align-items: center; justify-content: center;
-            min-height: 100vh;
-            color: #e0e0e0;
-        }
-        .login-box {
-            background: #252535;
-            border-radius: 16px;
-            padding: 40px;
-            width: 100%; max-width: 400px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            border: 1px solid #3d3d4d;
-        }
-        .login-header {
-            display: flex; align-items: center; justify-content: center;
-            margin-bottom: 30px;
-        }
-        .login-icon-img {
-            width: 64px; height: 64px;
-            border-radius: 12px;
-            margin-right: 16px;
-            flex-shrink: 0;
-        }
-        .login-title {
-            display: flex; flex-direction: column;
-        }
-        .login-title h1 {
-            font-size: 28px; font-weight: 700;
-            color: #ffffff;
-            letter-spacing: -0.5px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 8px;
-            color: #c0c0c0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        input[type="password"] {
-            width: 100%;
-            padding: 12px 14px;
-            border: 1px solid #3d3d4d;
-            border-radius: 8px;
-            background: #1a1a28;
-            color: #ffffff;
-            font-size: 16px;
-            transition: border-color 0.2s;
-        }
-        input[type="password"]:focus {
-            outline: none;
-            border-color: #2458CA;
-            box-shadow: 0 0 0 3px rgba(36, 88, 202, 0.1);
-        }
-        .form-group.error input[type="password"] {
-            border-color: #ff6b6b;
-        }
-        .error-msg {
-            font-size: 12px;
-            color: #ff6b6b;
-            margin-top: 6px;
-            display: none;
-        }
-        .form-group.error .error-msg {
-            display: block;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #2458CA 0%, #1a3fa0 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.1s, box-shadow 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        button:hover {
-            box-shadow: 0 8px 24px rgba(36, 88, 202, 0.3);
-        }
-        button:active {
-            transform: scale(0.98);
-        }
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GeoMechanics Tools</title>
+<link rel="icon" type="image/png" href="assets/app_icon.png">
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    background: var(--content-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 22px;
+    min-height: 188px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 16px rgba(20, 20, 24, 0.06);
+    transition: border-color var(--dur-fast) var(--ease-mac), transform var(--dur-fast) var(--ease-mac);
+    text-decoration: none;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+  .card-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: var(--icon-tint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    flex: 0 0 auto;
+  }
+  .card-icon svg { width: 22px; height: 22px; }
+
+  .card-title {
+    margin: 10px 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .card-desc {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 17px;
+    color: var(--text-secondary);
+  }
+
+  .card-link {
+    margin-top: auto;
+    padding-top: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    width: fit-content;
+  }
+
+  .help { cursor: pointer; }
+
+    .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none;
+    align-items: center; justify-content: center; z-index: 50; padding: 24px;
+  }
+  .modal-overlay.show { display: flex; }
+  .about-box {
+    position: relative;
+    background: var(--content-bg); border-radius: 18px; width: 280px; padding: 32px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  }
+  .about-icon {
+    width: 96px; height: 96px; border-radius: 22px;
+    object-fit: cover;
+  }
+  .about-title { font-size: 17px; font-weight: 700; }
+  .about-version { font-size: 12.5px; color: var(--text-secondary); margin-top: -8px; }
+  .about-divider { width: 200px; height: 1px; background: var(--card-border); }
+  .about-block { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .about-label { font-size: 11px; color: var(--text-secondary); }
+  .about-name { font-size: 13.5px; font-weight: 600; }
+  .about-tag { font-size: 10.5px; color: var(--text-secondary); }
+  .about-link { font-size: 13px; color: var(--accent); text-decoration: none; }
+  .about-link:hover { text-decoration: underline; }
+  .about-close {
+    position: absolute; top: 10px; right: 10px; width: 22px; height: 22px;
+    border-radius: 999px; border: none; background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: var(--text-secondary);
+    padding: 0;
+  }
+  .about-close svg { width: 18px; height: 18px; }
+</style>
 </head>
 <body>
-    <div class="login-box">
-        <div class="login-header">
-            <img class="login-icon-img" src="assets/app_icon.png" alt="GeoMechanicsTools">
-            <div class="login-title">
-                <h1>GeoMechanicsTools</h1>
-            </div>
-        </div>
-        <form id="loginForm">
-            <div class="form-group" id="passwordGroup">
-                <label for="password">Clave de acceso</label>
-                <input type="password" id="password" placeholder="Ingresá la clave" autofocus>
-                <div class="error-msg">Clave incorrecta</div>
-            </div>
-            <button type="submit">Acceder</button>
-        </form>
+
+<div class="app" id="app">
+  <div class="titlebar">
+    <button class="chip-btn titlebar-toggle" id="sidebarToggle" title="Mostrar/ocultar barra lateral" aria-label="Mostrar/ocultar barra lateral">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <rect x="3" y="4" width="18" height="16" rx="3"/>
+        <line x1="9" y1="4" x2="9" y2="20"/>
+      </svg>
+    </button>
+    <div class="titlebar-title">GeoMechanics Tools</div>
+    <button class="chip-btn folder-chip" id="topAbrirBtn" title="Abrir" aria-label="Abrir">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M3,7 L3,19 L21,19 L21,9 L11,9 L9,7 Z"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="body">
+    <div class="sidebar">
+      <div class="section-label">INICIO</div>
+      <button class="nav-item" id="sidebarAbrirBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M3,7 L3,19 L21,19 L21,9 L11,9 L9,7 Z"/>
+        </svg>
+        Abrir
+      </button>
+
+      <div class="section-label">MÓDULOS</div>
+
+      <a class="nav-item" href="modulos/rmr.html">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <rect x="2" y="2" width="8" height="8" rx="2"/><rect x="14" y="2" width="8" height="8" rx="2"/>
+          <rect x="2" y="14" width="8" height="8" rx="2"/><rect x="14" y="14" width="8" height="8" rx="2"/>
+        </svg>
+        RMR Bieniawski
+      </a>
+      <a class="nav-item" href="modulos/q.html">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <rect x="2" y="12" width="4" height="9" rx="1"/><rect x="10" y="6" width="4" height="15" rx="1"/><rect x="18" y="9" width="4" height="12" rx="1"/>
+        </svg>
+        Índice Q
+      </a>
+      <a class="nav-item" href="modulos/mge.html">
+        <svg viewBox="0 0 24 24" fill="none">
+          <polyline points="3,17 8,11 13,15 19,6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle cx="3" cy="17" r="1.5" fill="currentColor"/><circle cx="8" cy="11" r="1.5" fill="currentColor"/>
+          <circle cx="13" cy="15" r="1.5" fill="currentColor"/><circle cx="19" cy="6" r="1.5" fill="currentColor"/>
+        </svg>
+        MGE
+      </a>
+      <a class="nav-item" href="modulos/camaras.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+          <polygon points="2,9 12,2 22,9"/>
+          <line x1="2" y1="10" x2="22" y2="10"/>
+          <rect x="4.5" y="11" width="2.4" height="8" fill="currentColor" stroke="none"/>
+          <rect x="10.8" y="11" width="2.4" height="8" fill="currentColor" stroke="none"/>
+          <rect x="17.1" y="11" width="2.4" height="8" fill="currentColor" stroke="none"/>
+          <rect x="2" y="19.5" width="20" height="2.2" fill="currentColor" stroke="none"/>
+        </svg>
+        Cámaras y Pilares
+      </a>
+      <a class="nav-item" href="modulos/crown.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+          <polygon points="3,18 3,9 7.5,13 12,6 16.5,13 21,9 21,18"/>
+          <rect x="3" y="17" width="18" height="2.2" fill="currentColor" stroke="none"/>
+        </svg>
+        Crown Pillar
+      </a>
+
+      <div class="sidebar-footer">
+        <span class="help" id="aboutTrigger">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="12" cy="12" r="9"/>
+            <text x="12" y="16.2" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor" stroke="none" font-family="inherit">?</text>
+          </svg>
+          Ayuda
+        </span>
+        <span>JVPC</span>
+      </div>
     </div>
 
-    <script>
-        const form = document.getElementById('loginForm');
-        const passwordInput = document.getElementById('password');
-        const passwordGroup = document.getElementById('passwordGroup');
-        const correctPassword = 'JVPC';
+    <div class="content">
+      <div class="content-inner">
+        <h1 class="page-title">GeoMechanics Tools</h1>
+        <p class="page-subtitle">Selecciona un módulo para comenzar un nuevo análisis.</p>
 
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const entered = passwordInput.value.trim();
+        <div class="card-grid">
+          <a class="card" href="modulos/rmr.html">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <rect x="2" y="2" width="8" height="8" rx="2"/><rect x="14" y="2" width="8" height="8" rx="2"/>
+                <rect x="2" y="14" width="8" height="8" rx="2"/><rect x="14" y="14" width="8" height="8" rx="2"/>
+              </svg>
+            </div>
+            <h2 class="card-title">RMR Bieniawski</h2>
+            <p class="card-desc">Clasificación Rock Mass Rating (Bieniawski, 1989).</p>
+            <span class="card-link">Abrir &rarr;</span>
+          </a>
 
-            if (entered === correctPassword) {
-                sessionStorage.setItem('gmt_auth', 'true');
-                window.location.href = "programa/index.html";
-            } else {
-                passwordGroup.classList.add('error');
-                passwordInput.value = '';
-                passwordInput.focus();
-                setTimeout(() => passwordGroup.classList.remove('error'), 3000);
-            }
-        });
-    </script>
+          <a class="card" href="modulos/q.html">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <rect x="2" y="12" width="4" height="9" rx="1"/><rect x="10" y="6" width="4" height="15" rx="1"/><rect x="18" y="9" width="4" height="12" rx="1"/>
+              </svg>
+            </div>
+            <h2 class="card-title">Índice Q</h2>
+            <p class="card-desc">Índice de calidad Q del macizo rocoso (Barton, 1974).</p>
+            <span class="card-link">Abrir &rarr;</span>
+          </a>
+
+          <a class="card" href="modulos/mge.html">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none">
+                <polyline points="3,17 8,11 13,15 19,6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+                <circle cx="3" cy="17" r="1.5" fill="currentColor"/><circle cx="8" cy="11" r="1.5" fill="currentColor"/>
+                <circle cx="13" cy="15" r="1.5" fill="currentColor"/><circle cx="19" cy="6" r="1.5" fill="currentColor"/>
+              </svg>
+            </div>
+            <h2 class="card-title">MGE</h2>
+            <p class="card-desc">Método empírico para el dimensionamiento de grandes excavaciones subterráneas.</p>
+            <span class="card-link">Abrir &rarr;</span>
+          </a>
+
+          <a class="card" href="modulos/camaras.html">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+                <polygon points="2,9 12,2 22,9"/>
+                <line x1="2" y1="10" x2="22" y2="10"/>
+                <rect x="4.5" y="11" width="2.4" height="8" fill="currentColor" stroke="none"/>
+                <rect x="10.8" y="11" width="2.4" height="8" fill="currentColor" stroke="none"/>
+                <rect x="17.1" y="11" width="2.4" height="8" fill="currentColor" stroke="none"/>
+                <rect x="2" y="19.5" width="20" height="2.2" fill="currentColor" stroke="none"/>
+              </svg>
+            </div>
+            <h2 class="card-title">Cámaras y Pilares</h2>
+            <p class="card-desc">Dimensionamiento de cámaras y pilares.</p>
+            <span class="card-link">Abrir &rarr;</span>
+          </a>
+
+          <a class="card" href="modulos/crown.html">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+                <polygon points="3,18 3,9 7.5,13 12,6 16.5,13 21,9 21,18"/>
+                <rect x="3" y="17" width="18" height="2.2" fill="currentColor" stroke="none"/>
+              </svg>
+            </div>
+            <h2 class="card-title">Crown Pillar</h2>
+            <p class="card-desc">Estabilidad de pilar corona (crown pillar).</p>
+            <span class="card-link">Abrir &rarr;</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" accept="application/json" id="openFileInput" style="display:none;">
+
+<div class="modal-overlay" id="aboutOverlay">
+  <div class="about-box">
+    <button class="about-close" id="aboutClose" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>
+      </svg>
+    </button>
+    <img class="about-icon" src="assets/app_icon.png" alt="GeoMechanics Tools">
+    <div class="about-title">GeoMechanics Tools</div>
+    <div class="about-version">Versión 1.0</div>
+    <div class="about-divider"></div>
+    <div class="about-block">
+      <span class="about-label">Elaborado por</span>
+      <span class="about-name">Jeremy Peñalva Cabrera</span>
+      <span class="about-tag">JVPC</span>
+    </div>
+    <div class="about-block">
+      <span class="about-label">Contacto</span>
+      <a class="about-link" href="mailto:jpenalvac@unsa.edu.pe">jpenalvac@unsa.edu.pe</a>
+    </div>
+  </div>
+</div>
+
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  var MODULOS = { rmr: "rmr.html", q: "q.html", mge: "mge.html", camaras: "camaras.html", crown: "crown.html" };
+  var input = document.getElementById("openFileInput");
+  function pedirArchivo() { input.click(); }
+  document.getElementById("topAbrirBtn").addEventListener("click", pedirArchivo);
+  document.getElementById("sidebarAbrirBtn").addEventListener("click", pedirArchivo);
+  input.addEventListener("change", function () {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var destino = null;
+      try {
+        var datos = JSON.parse(e.target.result);
+        destino = MODULOS[datos.modulo];
+      } catch (err) {  }
+      if (!destino) {
+        alert("El archivo no es un proyecto de GeoMechanics Tools válido.");
+        input.value = "";
+        return;
+      }
+      sessionStorage.setItem("gmPendingImport", e.target.result);
+      window.location.href = "modulos/" + destino;
+    };
+    reader.readAsText(file);
+  });
+}());
+</script>
+<script>const _0x27c6a9=_0x54b8;(function(_0x27d278,_0x367a58){const _0x31b194=_0x54b8,_0x2205af=_0x27d278();while(!![]){try{const _0x589215=parseInt(_0x31b194(0x109))/0x1+-parseInt(_0x31b194(0xff))/0x2*(-parseInt(_0x31b194(0x104))/0x3)+parseInt(_0x31b194(0x102))/0x4*(-parseInt(_0x31b194(0x103))/0x5)+parseInt(_0x31b194(0xf8))/0x6*(parseInt(_0x31b194(0x106))/0x7)+-parseInt(_0x31b194(0xf7))/0x8+parseInt(_0x31b194(0xfd))/0x9*(-parseInt(_0x31b194(0x101))/0xa)+parseInt(_0x31b194(0xfb))/0xb;if(_0x589215===_0x367a58)break;else _0x2205af['push'](_0x2205af['shift']());}catch(_0x454347){_0x2205af['push'](_0x2205af['shift']());}}}(_0x4596,0x633a8));function _0x54b8(_0x17505b,_0x7d7a5d){_0x17505b=_0x17505b-0xf7;const _0x45967d=_0x4596();let _0x54b8a5=_0x45967d[_0x17505b];return _0x54b8a5;}const aboutTrigger=document['getElementById']('aboutTrigger'),aboutOverlay=document[_0x27c6a9(0xfc)]('aboutOverlay'),aboutClose=document['getElementById']('aboutClose');function _0x4596(){const _0x58c47d=['add','target','10088826xtRaaL','getElementById','1622529gbxHZa','show','218662pHDfkT','remove','10wfNopy','4gHEeOk','2935535pMAMfE','3XwLBdr','addEventListener','69587AWoQHR','click','classList','486691rhUODP','3748744xjwpFB','78qEaffN'];_0x4596=function(){return _0x58c47d;};return _0x4596();}aboutTrigger[_0x27c6a9(0x105)](_0x27c6a9(0x107),()=>aboutOverlay[_0x27c6a9(0x108)][_0x27c6a9(0xf9)](_0x27c6a9(0xfe))),aboutClose[_0x27c6a9(0x105)](_0x27c6a9(0x107),()=>aboutOverlay[_0x27c6a9(0x108)][_0x27c6a9(0x100)](_0x27c6a9(0xfe))),aboutOverlay[_0x27c6a9(0x105)](_0x27c6a9(0x107),_0x64c0df=>{const _0x282b3b=_0x27c6a9;if(_0x64c0df[_0x282b3b(0xfa)]===aboutOverlay)aboutOverlay['classList'][_0x282b3b(0x100)](_0x282b3b(0xfe));});</script>
 </body>
 </html>

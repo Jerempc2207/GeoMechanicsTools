@@ -1,12 +1,4 @@
-/* ============================================================
-   GeoMechanics Tools — tokens y shell compartidos
-   (titlebar, sidebar, layout base). Colores calcados de
-   ModuloGeomecanico.color en Swift: RGB(36,88,202) = #2458CA.
-   ============================================================ */
 
-/* Curva de easing tipo macOS (deceleracion suave, sin rebote) y duraciones
-   mas generosas — las transiciones por defecto del navegador (ease, 0.1-0.15s)
-   se sienten "instantaneas" comparadas con las animaciones de SwiftUI. */
 @property --sidebar-w {
   syntax: '<length>';
   inherits: true;
@@ -115,29 +107,19 @@ html, body {
   display: flex;
   flex-direction: column;
   --sidebar-w: 250px;
-  /* Anima la custom property en si (soportado en navegadores modernos via
-     @property arriba): al cambiar --sidebar-w, el ancho de .body se
-     interpola en vez de saltar de 250px a 0 de golpe. */
-  transition: --sidebar-w var(--dur-base) var(--ease-mac);
+    transition: --sidebar-w var(--dur-base) var(--ease-mac);
 }
 
-/* ============ Title bar ============ */
 .titlebar {
   height: 52px;
   flex: 0 0 auto;
   background: var(--titlebar-bg);
   border-bottom: 1px solid var(--divider);
   display: grid;
-  /* La columna del toggle es de ancho fijo (no --sidebar-w): si dependiera
-     del mismo ancho que colapsa a 0, el botón se superpone al título al
-     cerrar el sidebar. */
-  grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto 1fr auto;
   align-items: center;
 }
 
-/* Paginas de modulo: no tienen sidebar (en la app real, "Inicio" reemplaza
-   la barra lateral dentro de un modulo), asi que el titlebar arranca
-   directo con el titulo, sin la columna reservada para el toggle. */
 .titlebar--module {
   grid-template-columns: 1fr auto;
   padding-left: 16px;
@@ -181,7 +163,6 @@ html, body {
 .folder-chip svg { width: 16px; height: 16px; }
 .folder-chip:hover { background: var(--hover-fill); }
 
-/* ============ Barra de acciones del modulo (Inicio/Nuevo/Abrir/Guardar/Exportar) ============ */
 .titlebar-mid {
   display: flex;
   align-items: center;
@@ -216,9 +197,6 @@ html, body {
 }
 .tb-icon .badge svg { width: 7px; height: 7px; }
 
-/* Exportar PDF: solo icono, en la esquina (equivalente al .primaryAction
-   del toolbar de SwiftUI) — no es un boton de texto como los .tb-icon de
-   navegacion, va aparte a la derecha del todo. */
 .tb-export {
   width: 32px;
   height: 32px;
@@ -237,7 +215,6 @@ html, body {
 .tb-export:hover { background: var(--hover-fill); }
 .tb-export svg { width: 17px; height: 17px; }
 
-/* ============ Body ============ */
 .body { flex: 1 1 auto; display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 0; min-width: 0; }
 
 .sidebar {
@@ -295,7 +272,6 @@ html, body {
 .sidebar-footer .help { display: flex; align-items: center; gap: 8px; }
 .sidebar-footer svg { width: 15px; height: 15px; }
 
-/* ============ Content ============ */
 .content { overflow: auto; background: var(--content-bg); min-width: 0; flex: 1 1 auto; }
 .content-inner { padding: 32px 40px 40px; max-width: 1100px; margin: 0 auto; }
 
